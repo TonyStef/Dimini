@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: "Real-time semantic relationship visualization for therapy sessions. Powered by AI to help therapists track topics, emotions, and connections during patient conversations.",
   keywords: ["therapy", "AI", "mental health", "therapy assistant", "semantic analysis"],
   authors: [{ name: "Dimini Team" }],
+  icons: {
+    icon: '/forweb.svg',
+  },
   openGraph: {
     title: "Dimini - AI Therapy Assistant",
     description: "Real-time semantic relationship visualization for therapy sessions",

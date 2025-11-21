@@ -60,17 +60,17 @@ export default function HomePage() {
             {/* Logo - Now clickable */}
             <a
               href="#"
-              className="flex items-center gap-2 min-h-[44px] rounded-lg
+              className="flex items-center gap-3 min-h-[44px] rounded-lg
                          focus-visible:outline-2 focus-visible:outline-accent-primary
                          focus-visible:outline-offset-2"
               aria-label="Dimini - Home"
             >
-              <Image 
-                src="/logo.webp" 
-                alt="Dimini Logo" 
-                width={32} 
-                height={32} 
-                className="w-8 h-8"
+              <img
+                src="/forweb.svg"
+                alt="Dimini mark"
+                className="w-10 h-10 text-current"
+                style={{ width: '2.5rem', height: '2.5rem' }}
+                loading="lazy"
               />
               <span className="font-display text-2xl font-bold">Dimini</span>
             </a>
@@ -509,12 +509,12 @@ export default function HomePage() {
               {/* Brand */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Image
-                    src="/logo.webp"
+                  <img
+                    src="/forweb.svg"
                     alt="Dimini logo"
-                    width={40}
-                    height={40}
                     className="w-10 h-10 rounded-lg shadow-accent-primary/20 shadow-lg"
+                    style={{ width: '2.5rem', height: '2.5rem' }}
+                    loading="lazy"
                   />
                   <span className="font-display text-xl font-bold">Dimini</span>
                 </div>
@@ -558,12 +558,12 @@ export default function HomePage() {
 
             <div className="mt-12 pt-8 border-t border-border-subtle flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2">
-                <Image 
-                  src="/logo.webp" 
-                  alt="Dimini Logo" 
-                  width={24} 
-                  height={24} 
+                <img
+                  src="/forweb.svg"
+                  alt="Dimini Logo"
                   className="w-6 h-6 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300"
+                  style={{ width: '1.5rem', height: '1.5rem' }}
+                  loading="lazy"
                 />
                 <p className="text-sm text-text-tertiary">
                   © 2025 Dimini. All rights reserved.

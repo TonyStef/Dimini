@@ -34,7 +34,7 @@ import { patientsAPI } from '@/lib/api';
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id as string;
+  const patientId = params.patientId as string;
 
   const { user, loading: authLoading } = useAuth();
   const { currentPatient, loading, fetchPatientDetail, startSession } = usePatients();
@@ -322,22 +322,23 @@ export default function PatientDetailPage() {
                 )}
 
                 {/* Initial Concerns */}
-                {currentPatient.demographics?.initial_concerns && currentPatient.demographics.initial_concerns.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Initial Concerns</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {currentPatient.demographics.initial_concerns.map((concern, index) => (
-                          <Badge key={index} variant="secondary">
-                            {concern}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {currentPatient.demographics?.initial_concerns &&
+                  currentPatient.demographics.initial_concerns.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Initial Concerns</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {currentPatient.demographics.initial_concerns.map((concern, index) => (
+                            <Badge key={index} variant="secondary">
+                              {concern}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
               </TabsContent>
 
               {/* Sessions Tab */}
@@ -413,3 +414,4 @@ export default function PatientDetailPage() {
     </div>
   );
 }
+

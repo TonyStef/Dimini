@@ -1,0 +1,24 @@
+# Python / virtualenv
+venv/
+__pycache__/
+*.pyc
+
+# Environment / secrets
+.env
+.env.*
+
+# Prisma artifacts
+prisma/.mypy_cache/
+prisma/.cache/
+
+# IDE / tooling
+*.log
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Coverage / test
+htmlcov/
+.coverage
+*.coverage

@@ -1,0 +1,42 @@
+# OS / editor junk
+.DS_Store
+*.log
+*.swp
+
+# Env / secrets
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+backend/.env
+backend/.env.*
+
+# Python backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/.coverage
+backend/coverage/
+backend/htmlcov/
+backend/prisma/.cache/
+backend/prisma/.mypy_cache/
+
+# Node / Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/.swc/
+frontend/.vercel/
+frontend/.eslintcache
+frontend/coverage/
+frontend/tsconfig.tsbuildinfo
+
+# Misc tools
+*.pid
+
+# Backend Node CLI tooling
+backend/node_modules/
+backend/package-lock.json

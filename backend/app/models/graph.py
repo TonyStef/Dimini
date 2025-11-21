@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from enum import Enum
 
 class NodeType(str, Enum):
@@ -11,7 +11,7 @@ class GraphNodeBase(BaseModel):
     node_id: str
     node_type: NodeType
     label: str
-    properties: Optional[Dict[str, Any]] = {}
+    properties: Dict[str, Any] = Field(default_factory=dict)
 
 class GraphNodeCreate(GraphNodeBase):
     embedding: List[float]
@@ -31,7 +31,7 @@ class GraphEdgeBase(BaseModel):
     target_node_id: str
     similarity_score: float
     relationship_type: str = "related_to"
-    properties: Optional[Dict[str, Any]] = {}
+    properties: Dict[str, Any] = Field(default_factory=dict)
 
 class GraphEdgeCreate(GraphEdgeBase):
     pass

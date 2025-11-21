@@ -1,0 +1,554 @@
+// Casius Database Schema
+// AI Voice Agents for Dubai Real Estate
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// USER & AGENCY MANAGEMENT
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  role          Role     @default(AGENT)
+
+  agencyId      String   @map("agency_id")
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Relations
+  auditLogs     AuditLog[]
+
+  // Security: Password Reset & Account Protection
+  tokenVersion         Int       @default(0) @map("token_version")           // Incremented to invalidate all JWTs on password change
+  resetToken           String?   @unique @map("reset_token")                 // Bcrypt hash of password reset token (not plain text)
+  resetTokenExpiry     DateTime? @map("reset_token_expiry")                  // Token expiration (15 minutes from creation)
+  lastPasswordChange   DateTime? @map("last_password_change")                // Audit trail for compliance
+  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")   // Counter for brute force protection (reset on success)
+  accountLockedUntil   DateTime? @map("account_locked_until")                // Temporary lockout timestamp (locked if > now())
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([agencyId])
+  @@index([email])
+  @@index([resetToken])              // Fast lookup for token validation
+  @@index([resetTokenExpiry])        // Query performance for expired token cleanup
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+model Agency {
+  id                  String     @id @default(cuid())
+  name                String
+  phoneNumber         String?    @unique @map("phone_number")
+
+  // Twilio & Retell Integration
+  twilioNumber        String?    @unique @map("twilio_number")
+  retellAgentId       String?    @map("retell_agent_id")
+
+  // Notifications
+  emailNotifications  String     @default("") @map("email_notifications") // Comma-separated emails
+
+  // Relations
+  users               User[]
+  properties          Property[]
+  calls               Call[]
+  propertyBatches     PropertyBatch[]
+  tokenUsage          TokenUsage[]
+  campaignLeads       CampaignLead[]
+  platformTokens      AgencyPlatformToken[]
+
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  @@index([phoneNumber])
+  @@index([twilioNumber])
+  @@map("agencies")
+}
+
+// ============================================
+// PROPERTY MANAGEMENT
+// ============================================
+
+model Property {
+  id              String   @id @default(cuid())
+
+  agencyId        String   @map("agency_id")
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  name            String
+  location        String
+  price           Decimal?  @db.Decimal(12, 2)
+
+  bedrooms        Int?
+  bathrooms       Int?
+  area            Int?     // Square feet
+
+  propertyType    PropertyType @map("property_type")
+
+  description     String?  @db.Text
+  filePath        String?  @map("file_path") // Relative path to uploaded file
+
+  status          PropertyStatus @default(AVAILABLE)
+
+  // PDF Extraction Metadata
+  extractionSource       String?  @map("extraction_source")       // "LLAMA_PARSE" | "MANUAL"
+  extractionConfidence   String?  @map("extraction_confidence")   // "HIGH" | "MEDIUM" | "LOW"
+  originalFileName       String?  @map("original_file_name")
+  extractionBatchId      String?  @map("extraction_batch_id")
+
+  // Relations
+  interestedLeads  PropertyInterest[]
+  extractionBatch  PropertyBatch?     @relation(fields: [extractionBatchId], references: [id])
+  extractionData   PropertyExtraction?
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([agencyId])
+  @@index([status])
+  @@index([propertyType])
+  @@index([extractionSource])
+  @@index([extractionConfidence])
+  @@index([extractionBatchId])
+  @@map("properties")
+}
+
+enum PropertyType {
+  VILLA
+  APARTMENT
+  TOWNHOUSE
+  STUDIO
+  PENTHOUSE
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+  OFF_MARKET
+}
+
+// ============================================
+// CALL & LEAD MANAGEMENT
+// ============================================
+
+model Call {
+  id              String    @id @default(cuid())
+
+  agencyId        String    @map("agency_id")
+  agency          Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Caller Information
+  callerId        String    @map("caller_id") // Phone number of caller
+  callerName      String?   @map("caller_name")
+
+  // Call Details
+  duration        Int       @default(0) // seconds
+  startedAt       DateTime? @map("started_at")  // When call actually started
+  endedAt         DateTime? @map("ended_at")    // When call ended
+  transcript      String    @default("") @db.Text
+  recordingUrl    String?   @map("recording_url")
+
+  // Integration IDs
+  retellCallId    String?   @unique @map("retell_call_id")
+  twilioCallSid   String?   @unique @map("twilio_call_sid")
+
+  status          CallStatus @default(IN_PROGRESS)
+
+  // Disconnect tracking
+  disconnectReason String?  @default("completed") @map("disconnect_reason") // user_hangup, error, timeout, completed
+  errorMessage     String?  @map("error_message") @db.Text
+
+  // Relations
+  lead            Lead?
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Optimized indexes for calls feature
+  @@index([agencyId])                                        // Basic agency isolation
+  @@index([agencyId, createdAt(sort: Desc)])                // Recent calls (dashboard)
+  @@index([agencyId, status])                               // Status filtering per agency
+  @@index([agencyId, createdAt(sort: Desc), status])        // Complex filters (date + status)
+  @@index([status])                                          // Global status queries
+  @@index([callerId])                                        // Caller lookup
+  @@index([callerName])                                      // Caller name search
+  @@map("calls")
+}
+
+enum CallStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  MISSED
+  NO_ANSWER
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+
+  callId          String   @unique @map("call_id")
+  call            Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  // Link to Campaign Lead (if this lead came from a marketing campaign)
+  campaignLeadId  String?  @unique @map("campaign_lead_id")
+  campaignLead    CampaignLead? @relation(fields: [campaignLeadId], references: [id], onDelete: SetNull)
+
+  // Contact Information
+  name            String?
+  phone           String
+  email           String?
+
+  // Requirements
+  budget          String?
+  propertyType    String?  @map("property_type")
+  bedrooms        Int?
+  location        String?
+  timeline        String?
+
+  // Lead Management
+  score           LeadScore @default(COLD)
+  interestLevel   InterestLevel? @map("interest_level") // Brian's assessment of user engagement
+  notes           String?   @db.Text
+  contacted       Boolean   @default(false)
+
+  // Relations
+  propertyInterests PropertyInterest[]
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([callId])
+  @@index([campaignLeadId])
+  @@index([score])
+  @@index([score, createdAt(sort: Desc)]) // Composite index for hot leads query
+  @@index([createdAt])
+  @@index([phone])
+  @@index([contacted, score, createdAt(sort: Desc)]) // Composite index for leads list default sort
+  @@index([contacted]) // Index for contacted filter
+  @@map("leads")
+}
+
+enum LeadScore {
+  HOT
+  WARM
+  COLD
+}
+
+enum InterestLevel {
+  HIGH           // Highly engaged, asks questions, clear interest
+  MEDIUM         // Interested but cautious, needs more info
+  LOW            // Vague responses, hesitant
+  NOT_INTERESTED // Clearly not interested, declined follow-up
+}
+
+// ============================================
+// PROPERTY-LEAD RELATIONSHIP
+// ============================================
+
+model PropertyInterest {
+  id              String   @id @default(cuid())
+
+  leadId          String   @map("lead_id")
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  propertyId      String   @map("property_id")
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Interest tracking
+  isPrimary       Boolean  @default(false) // Main property of interest
+  extractedFrom   String?  @map("extracted_from") @db.Text // AI extraction context for debugging
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([leadId, propertyId]) // Prevent duplicate interests
+  @@index([propertyId]) // Fast lookup of leads for a property
+  @@index([leadId]) // Fast lookup of properties for a lead
+  @@map("property_interests")
+}
+
+// ============================================
+// AUDIT LOG (Settings Changes)
+// ============================================
+
+model AuditLog {
+  id              String   @id @default(cuid())
+
+  // User who made the change
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What was changed
+  section         String   // 'profile', 'agency', 'team'
+  action          String   // 'email_changed', 'password_changed', 'agency_updated', etc.
+
+  // Change details (JSON)
+  changesBefore   Json?    @map("changes_before") // State before change
+  changesAfter    Json?    @map("changes_after")  // State after change
+
+  // Security context
+  ipAddress       String   @map("ip_address")
+  userAgent       String   @map("user_agent")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([section])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// ENTERPRISE CONTACT MANAGEMENT
+// ============================================
+
+model EnterpriseContact {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  agencyName  String   @map("agency_name")
+  agencySize  String   @map("agency_size")
+  message     String   @db.Text
+  status      String   @default("NEW") // NEW, CONTACTED, QUALIFIED, CLOSED
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@map("enterprise_contacts")
+}
+
+// ============================================
+// PDF EXTRACTION & PARSING
+// ============================================
+
+// Multi-property PDF batch tracking
+model PropertyBatch {
+  id              String   @id @default(cuid())
+  agencyId        String   @map("agency_id")
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  sourceFileName  String   @map("source_file_name")
+  sourceFileHash  String   @map("source_file_hash")  // SHA-256 for deduplication
+  propertyCount   Int      @default(0) @map("property_count")
+
+  // Job tracking fields (for async processing)
+  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
+  errorMessage     String?          @map("error_message") @db.Text
+  startedAt        DateTime?        @map("started_at")
+  completedAt      DateTime?        @map("completed_at")
+
+  // Relations
+  properties      Property[]
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([agencyId])
+  @@index([sourceFileHash])
+  @@index([processingStatus, agencyId]) // For job status queries
+  @@map("property_batches")
+}
+
+// Processing status for async job tracking
+enum ProcessingStatus {
+  PENDING      // Job created, awaiting processing
+  PROCESSING   // Currently being processed
+  COMPLETED    // Successfully completed
+  FAILED       // Processing failed with error
+}
+
+// Extracted data storage for debugging and reprocessing
+model PropertyExtraction {
+  id              String   @id @default(cuid())
+  propertyId      String   @unique @map("property_id")
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  rawMarkdown     String   @db.Text          // LlamaParse output
+  gptPrompt       String   @db.Text          // Extraction prompt used
+  gptResponse     Json                       // Raw JSON response
+
+  llamaParseTimeMs Int    @map("llama_parse_time_ms")
+  gptOssTimeMs     Int    @map("gpt_oss_time_ms")
+
+  tokenUsageInput  Int    @map("token_usage_input")
+  tokenUsageOutput Int    @map("token_usage_output")
+  estimatedCost    Float  @map("estimated_cost")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([propertyId])
+  @@map("property_extractions")
+}
+
+// Deduplication cache for identical PDFs
+model ExtractionCache {
+  id          String   @id @default(cuid())
+  hash        String   @unique              // SHA-256 of PDF content
+  data        Json                          // Extracted properties
+  metadata    Json                          // Processing metadata
+
+  usageCount  Int      @default(1) @map("usage_count")  // Track reuse
+  expiresAt   DateTime @map("expires_at")               // TTL: 30 days
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([hash])
+  @@index([expiresAt])
+  @@map("extraction_cache")
+}
+
+// Token usage tracking for cost monitoring
+model TokenUsage {
+  id            String   @id @default(cuid())
+  agencyId      String   @map("agency_id")
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  service       String   // "LLAMA_PARSE" | "GPT_OSS"
+  inputTokens   Int      @map("input_tokens")
+  outputTokens  Int      @map("output_tokens")
+  estimatedCost Float    @map("estimated_cost")
+
+  propertyId    String?  @map("property_id")  // Optional link to property
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([agencyId, createdAt])
+  @@index([service])
+  @@map("token_usage")
+}
+
+// ============================================
+// LEAD CAMPAIGN INTEGRATION (Meta, LinkedIn, TikTok)
+// ============================================
+
+// Campaign leads from external platforms (Meta, LinkedIn, TikTok)
+model CampaignLead {
+  id              String   @id @default(cuid())
+
+  agencyId        String   @map("agency_id")
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  platform        Platform // 'META', 'LINKEDIN', 'TIKTOK'
+
+  // External Platform IDs
+  externalLeadId  String?  @map("external_lead_id")  // leadgen_id (Meta), URN (LinkedIn), lead_id (TikTok)
+  formId          String?  @map("form_id")           // Form ID from platform
+  adId            String?  @map("ad_id")             // Ad ID (may be null for test leads)
+  campaignId      String?  @map("campaign_id")       // Campaign ID
+
+  // Contact Information
+  fullName        String?  @map("full_name")
+  firstName       String?  @map("first_name")
+  lastName        String?  @map("last_name")
+  email           String?
+  phoneNumber     String?  @map("phone_number")
+
+  // Real Estate Specific Fields
+  propertyType    String?  @map("property_type")     // "Villa", "Apartment", etc.
+  budget          String?                            // "1-2 Million AED", etc.
+  timeline        String?                            // "Within 6 months", etc.
+  preferredLocation String? @map("preferred_location") @db.Text
+  purpose         String?                            // "living", "investment", "both"
+  bedrooms        String?                            // "2-3", "Studio", etc.
+
+  // Raw Payload Storage (for debugging and future processing)
+  rawPayload      Json     @map("raw_payload")       // Complete platform response
+
+  // Processing Timestamps
+  receivedAt      DateTime @default(now()) @map("received_at")
+  processedAt     DateTime? @map("processed_at")
+
+  // Brian Call Integration
+  callScheduledAt DateTime? @map("call_scheduled_at")
+  callInitiatedAt DateTime? @map("call_initiated_at")
+  callSid         String?   @map("call_sid")         // Twilio/LiveKit call SID
+  callStatus      CampaignLeadCallStatus @default(PENDING) @map("call_status")
+  callDuration    Int?      @map("call_duration")    // Call duration in seconds
+
+  // Relation to qualified lead (one-to-one, optional)
+  // If Brian successfully qualifies this campaign lead, it will be linked here
+  qualifiedLead   Lead?
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Indexes for performance
+  @@index([agencyId, platform])
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([callScheduledAt, callStatus])
+  @@index([platform, externalLeadId])
+  @@index([phoneNumber])
+  @@index([email])
+  @@map("campaign_leads")
+}
+
+// Platform enum
+enum Platform {
+  META      // Facebook/Instagram Lead Ads
+  LINKEDIN  // LinkedIn Lead Gen Forms
+  TIKTOK    // TikTok Lead Generation
+}
+
+// Campaign lead call status (separate from main Call status)
+enum CampaignLeadCallStatus {
+  PENDING       // Waiting to be called
+  QUEUED        // Added to call queue
+  IN_PROGRESS   // Call is active
+  COMPLETED     // Call finished successfully
+  FAILED        // Call failed
+  CANCELLED     // Lead cancelled/invalid
+}
+
+// OAuth tokens for platform integrations
+model AgencyPlatformToken {
+  id              String   @id @default(cuid())
+
+  agencyId        String   @map("agency_id")
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  platform        Platform
+
+  // OAuth Tokens (encrypted in database)
+  accessToken     String   @map("access_token") @db.Text
+  refreshToken    String?  @map("refresh_token") @db.Text
+  tokenExpiresAt  DateTime? @map("token_expires_at")
+
+  // Platform-specific Account IDs
+  platformAccountId   String?  @map("platform_account_id")   // Page ID (Meta), Sponsored Account URN (LinkedIn), Advertiser ID (TikTok)
+  platformAccountName String?  @map("platform_account_name")
+
+  // Status
+  isActive        Boolean  @default(true) @map("is_active")
+  lastVerifiedAt  DateTime? @map("last_verified_at")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([agencyId, platform]) // One token per platform per agency
+  @@unique([platform, platformAccountId]) // Prevent duplicate Page IDs across agencies
+  @@index([agencyId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("agency_platform_tokens")
+}

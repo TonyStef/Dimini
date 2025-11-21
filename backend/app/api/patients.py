@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 import logging
 
+from prisma import fields
+
 from app.database import db
 from app.models.patient import PatientCreate, PatientUpdate, PatientResponse, PatientListResponse
 from app.models.auth import UserResponse
@@ -37,7 +39,7 @@ async def get_patients(
         where=where_clause,
         skip=skip,
         take=limit,
-        order_by={"createdAt": "desc"}
+        order={"createdAt": "desc"}
     )
     
     return PatientListResponse(
@@ -66,10 +68,19 @@ async def create_patient(
             )
     
     # Create patient
+    demographics = (
+        fields.Json(patient_data.demographics.model_dump(exclude_none=True))
+        if patient_data.demographics
+        else None
+    )
+
     patient = await db.patient.create(
         data={
-            **patient_data.model_dump(exclude_none=True),
-            "therapistId": current_user.id
+            "name": patient_data.name,
+            "email": patient_data.email,
+            "phone": patient_data.phone,
+            "demographics": demographics,
+            "therapist": {"connect": {"id": current_user.id}},
         }
     )
     

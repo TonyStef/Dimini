@@ -83,12 +83,12 @@ Be professional, empathetic, and focused on therapeutic value."""
             # Fetch graph data for context
             nodes = await db.graphnode.find_many(
                 where={"sessionId": session_id},
-                order_by=[{"mentionCount": "desc"}, {"nodeType": "asc"}]
+                order=[{"mentionCount": "desc"}, {"nodeType": "asc"}]
             )
             
             edges = await db.graphedge.find_many(
                 where={"sessionId": session_id},
-                order_by={"similarityScore": "desc"},
+                order={"similarityScore": "desc"},
                 take=10  # Top 10 strongest connections
             )
             
@@ -179,14 +179,14 @@ Strong Connections: {'; '.join(connections[:5])}
             # Get most mentioned nodes
             top_nodes = await db.graphnode.find_many(
                 where={"sessionId": session_id},
-                order_by={"mentionCount": "desc"},
+                order={"mentionCount": "desc"},
                 take=5
             )
             
             # Get strongest connections
             top_edges = await db.graphedge.find_many(
                 where={"sessionId": session_id},
-                order_by={"similarityScore": "desc"},
+                order={"similarityScore": "desc"},
                 take=5
             )
             

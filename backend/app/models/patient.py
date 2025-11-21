@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, AliasChoices
 from datetime import datetime
 from typing import Optional, List
 from enum import Enum
@@ -102,12 +102,13 @@ class PatientUpdate(BaseModel):
 class PatientResponse(PatientBase):
     """Basic patient response model"""
     id: str
-    therapist_id: str
-    created_at: datetime
-    updated_at: datetime
+    therapist_id: str = Field(..., validation_alias=AliasChoices("therapistId", "therapist_id"))
+    created_at: datetime = Field(..., validation_alias=AliasChoices("createdAt", "created_at"))
+    updated_at: datetime = Field(..., validation_alias=AliasChoices("updatedAt", "updated_at"))
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class PatientStats(BaseModel):

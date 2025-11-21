@@ -219,13 +219,13 @@ async def get_session_graph_data(session_id: str) -> FrontendGraphData:
     # Fetch nodes
     nodes = await db.graphnode.find_many(
         where={"sessionId": session_id},
-        order_by={"createdAt": "asc"}
+        order={"createdAt": "asc"}
     )
     
     # Fetch edges
     edges = await db.graphedge.find_many(
         where={"sessionId": session_id},
-        order_by={"createdAt": "asc"}
+        order={"createdAt": "asc"}
     )
     
     # Convert to frontend format

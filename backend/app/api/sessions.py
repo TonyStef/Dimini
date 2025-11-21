@@ -64,7 +64,7 @@ async def get_sessions(
         where=where_clause,
         skip=skip,
         take=limit,
-        order_by={"startedAt": "desc"},
+        order={"startedAt": "desc"},
         include={"patient": True}
     )
     

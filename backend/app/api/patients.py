@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Optional
 import logging
 
 from prisma import fields
 
 from app.database import db
-from app.models.patient import PatientCreate, PatientUpdate, PatientResponse, PatientListResponse
+from app.models.patient import (
+    PatientCreate,
+    PatientUpdate,
+    PatientResponse,
+    PatientListResponse,
+    PatientDetailResponse,
+    PatientStats,
+)
 from app.models.auth import UserResponse
 from app.api.auth import get_current_user
 
@@ -87,7 +94,7 @@ async def create_patient(
     logger.info(f"Created patient {patient.id} for therapist {current_user.id}")
     return PatientResponse.model_validate(patient)
 
-@router.get("/{patient_id}", response_model=PatientResponse)
+@router.get("/{patient_id}", response_model=PatientDetailResponse)
 async def get_patient(
     patient_id: str,
     current_user: UserResponse = Depends(get_current_user)
@@ -106,7 +113,75 @@ async def get_patient(
             detail="Patient not found"
         )
     
-    return PatientResponse.model_validate(patient)
+    total_sessions = await db.session.count(
+        where={"patientId": patient_id}
+    )
+
+    active_sessions = await db.session.count(
+        where={"patientId": patient_id, "status": "ACTIVE"}
+    )
+
+    last_session = await db.session.find_first(
+        where={"patientId": patient_id},
+        order={"startedAt": "desc"}
+    )
+
+    stats = PatientStats(
+        total_sessions=total_sessions,
+        active_sessions=active_sessions,
+        last_session_date=last_session.startedAt if last_session else None
+    )
+
+    patient_data = PatientResponse.model_validate(patient).model_dump()
+
+    return PatientDetailResponse(
+        **patient_data,
+        stats=stats
+    )
+
+
+@router.get("/{patient_id}/sessions")
+async def get_patient_sessions(
+    patient_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    status: Optional[str] = None,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get session history for a patient"""
+    # Verify patient belongs to therapist
+    patient = await db.patient.find_first(
+        where={
+            "id": patient_id,
+            "therapistId": current_user.id
+        }
+    )
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found"
+        )
+
+    where_clause = {"patientId": patient_id}
+    if status:
+        where_clause["status"] = status.upper()
+
+    sessions = await db.session.find_many(
+        where=where_clause,
+        skip=skip,
+        take=limit,
+        order={"startedAt": "desc"}
+    )
+
+    total = await db.session.count(where=where_clause)
+
+    return {
+        "sessions": sessions,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.put("/{patient_id}", response_model=PatientResponse)
 async def update_patient(

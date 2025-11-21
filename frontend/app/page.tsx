@@ -62,10 +62,10 @@ export default function HomePage() {
             </a>
 
             {/* Desktop Navigation - Enhanced spacing & professional typography */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden md:flex items-center gap-12">
               <a
                 href="#features"
-                className="relative px-6 py-3 mr-8 text-base font-semibold tracking-wide
+                className="relative py-3 text-lg font-bold tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -76,7 +76,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#how-it-works"
-                className="relative px-6 py-3 mr-8 text-base font-semibold tracking-wide
+                className="relative py-3 text-lg font-bold tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -87,7 +87,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#security"
-                className="relative px-6 py-3 text-base font-semibold tracking-wide
+                className="relative py-3 text-lg font-bold tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -106,15 +106,15 @@ export default function HomePage() {
         </motion.nav>
 
         {/* Hero Section */}
-        <section id="main-content" className="container mx-auto px-6 pt-32 pb-24 md:pt-40 md:pb-32">
+        <section id="main-content" className="container mx-auto px-6 pt-48 pb-24 md:pt-64 md:pb-32">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="space-y-12"
+              className="space-y-16"
             >
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -143,14 +143,14 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="flex flex-col sm:flex-row gap-5 sm:gap-6"
+                className="flex flex-col sm:flex-row gap-5 sm:gap-8"
               >
-                <Button variant="default" size="lg" className="group font-semibold">
+                <Button variant="default" size="xl" className="group font-bold text-lg px-10">
                   Get Started
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button variant="outline" size="lg" className="group">
-                  <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <Button variant="outline" size="xl" className="group text-lg px-10">
+                  <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
                   Watch Overview
                 </Button>
               </motion.div>

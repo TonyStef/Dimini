@@ -54,35 +54,6 @@
 
   /* Spacing (32px baseline grid) */
   --spacing-unit: 8px;
-}
-
-@theme inline {
-  /* Colors */
-  --color-background: var(--background);
-  --color-foreground: var(--text-primary);
-  --color-surface: var(--surface);
-  --color-surface-elevated: var(--surface-elevated);
-
-  --color-primary: var(--accent-primary);
-  --color-secondary: var(--accent-secondary);
-  --color-accent: var(--accent-warm);
-
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-error: var(--error);
-  --color-info: var(--info);
-
-  --color-border: var(--border);
-  --color-border-subtle: var(--border-subtle);
-
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-tertiary: var(--text-tertiary);
-
-  /* Typography */
-  --font-display: 'Crimson Pro', serif;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   /* Spacing Scale (8px base) */
   --spacing-1: 0.5rem;   /* 8px */
@@ -101,7 +72,13 @@
   --radius-lg: 0.75rem;   /* 12px */
   --radius-xl: 1rem;      /* 16px */
   --radius-2xl: 1.5rem;   /* 24px */
+
+  /* Typography */
+  --font-display: 'Crimson Pro', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 }
+
 
 /* ========================================
    Base Styles

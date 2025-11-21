@@ -179,7 +179,7 @@ async def logout(current_user: UserResponse = Depends(get_current_user)):
     # Increment token version to invalidate all existing tokens
     await db.user.update(
         where={"id": current_user.id},
-        data={"tokenVersion": current_user.tokenVersion + 1}
+        data={"tokenVersion": current_user.token_version + 1}
     )
     
     logger.info(f"User logged out: {current_user.email}")

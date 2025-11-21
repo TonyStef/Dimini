@@ -24,6 +24,7 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     id: str
     role: str
+    token_version: int = Field(alias="tokenVersion")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
     

@@ -410,3 +410,17 @@ a:focus-visible {
     radial-gradient(circle at 30% 40%, rgba(124, 156, 191, 0.05) 0%, transparent 40%),
     radial-gradient(circle at 70% 60%, rgba(167, 139, 202, 0.05) 0%, transparent 40%);
 }
+
+/* Force correct colors for Browser Autofill (Chrome/Safari/Edge) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  /* Masks the white background with your dark surface color */
+  -webkit-box-shadow: 0 0 0 30px var(--surface-elevated) inset !important;
+  /* Forces text to be white */
+  -webkit-text-fill-color: var(--text-primary) !important;
+  /* Ensures cursor is white */
+  caret-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}

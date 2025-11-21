@@ -18,23 +18,23 @@ interface Edge {
 }
 
 const nodes: Node[] = [
-  { id: 'anxiety', label: 'Anxiety', type: 'emotion', x: 50, y: 30 },
-  { id: 'work_stress', label: 'Work Stress', type: 'topic', x: 75, y: 45 },
-  { id: 'girlfriend', label: 'Girlfriend', type: 'topic', x: 30, y: 60 },
-  { id: 'family', label: 'Family', type: 'topic', x: 55, y: 75 },
-  { id: 'frustrated', label: 'Frustrated', type: 'emotion', x: 20, y: 35 },
-  { id: 'hopeful', label: 'Hopeful', type: 'emotion', x: 80, y: 70 },
-  { id: 'therapy', label: 'Therapy', type: 'topic', x: 50, y: 50 },
+  { id: 'anxiety', label: 'Anxiety', type: 'emotion', x: 50, y: 20 },
+  { id: 'work_stress', label: 'Work Stress', type: 'topic', x: 82, y: 38 },
+  { id: 'sleep_issues', label: 'Sleep Issues', type: 'emotion', x: 25, y: 40 },
+  { id: 'therapy', label: 'Therapy', type: 'topic', x: 50, y: 52 },
+  { id: 'girlfriend', label: 'Girlfriend', type: 'topic', x: 18, y: 66 },
+  { id: 'self_care', label: 'Self-Care', type: 'topic', x: 38, y: 70 },
+  { id: 'family', label: 'Family', type: 'topic', x: 68, y: 82 },
 ];
 
 const edges: Edge[] = [
   { source: 'anxiety', target: 'work_stress', strength: 0.89 },
   { source: 'anxiety', target: 'therapy', strength: 0.82 },
-  { source: 'work_stress', target: 'frustrated', strength: 0.85 },
-  { source: 'girlfriend', target: 'family', strength: 0.78 },
-  { source: 'therapy', target: 'hopeful', strength: 0.81 },
-  { source: 'frustrated', target: 'girlfriend', strength: 0.76 },
-  { source: 'therapy', target: 'family', strength: 0.75 },
+  { source: 'anxiety', target: 'sleep_issues', strength: 0.87 },
+  { source: 'work_stress', target: 'family', strength: 0.84 },
+  { source: 'sleep_issues', target: 'self_care', strength: 0.80 },
+  { source: 'therapy', target: 'self_care', strength: 0.85 },
+  { source: 'girlfriend', target: 'self_care', strength: 0.78 },
 ];
 
 export default function SemanticNetworkDemo() {
@@ -69,7 +69,7 @@ export default function SemanticNetworkDemo() {
                   x2={targetNode.x}
                   y2={targetNode.y}
                   stroke="rgba(74, 85, 99, 0.4)"
-                  strokeWidth={edge.strength * 0.4}
+                  strokeWidth={edge.strength * 0.25}
                   strokeLinecap="round"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 1 }}
@@ -78,9 +78,9 @@ export default function SemanticNetworkDemo() {
 
                 {/* Animated particle flowing on edge */}
                 <motion.circle
-                  r="0.3"
-                  fill="rgba(124, 156, 191, 0.6)"
-                  initial={{ opacity: 0 }}
+                  r="0.2"
+                  fill="rgba(124, 156, 191, 0.5)"
+                  initial={{ opacity: 0, cx: sourceNode.x, cy: sourceNode.y }}
                   animate={{
                     opacity: [0, 1, 1, 0],
                     cx: [sourceNode.x, targetNode.x],
@@ -103,7 +103,7 @@ export default function SemanticNetworkDemo() {
           {nodes.map((node, i) => {
             const isEmotion = node.type === 'emotion';
             const color = isEmotion ? '#d98282' : '#6ea8d3';
-            const radius = 2.5;
+            const radius = 1.8;
 
             return (
               <g key={node.id}>
@@ -111,7 +111,7 @@ export default function SemanticNetworkDemo() {
                 <motion.circle
                   cx={node.x}
                   cy={node.y}
-                  r={radius + 1}
+                  r={radius + 0.5}
                   fill={color}
                   opacity={0.15}
                   initial={{ scale: 0, opacity: 0 }}
@@ -160,10 +160,10 @@ export default function SemanticNetworkDemo() {
                   {/* Node label */}
                   <motion.text
                     x={node.x}
-                    y={node.y - 4}
+                    y={node.y - 5}
                     textAnchor="middle"
                     fill="rgba(230, 237, 243, 0.95)"
-                    fontSize="2.5"
+                    fontSize="1.8"
                     fontFamily="var(--font-sans)"
                     fontWeight="500"
                     initial={{ opacity: 0, y: 2 }}

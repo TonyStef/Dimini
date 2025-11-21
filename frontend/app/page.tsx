@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { NavLink } from '@/components/NavLink';
 import AnimatedGraphBackground from '@/components/AnimatedGraphBackground';
 import FeatureCard from '@/components/FeatureCard';
 import HowItWorksFlow from '@/components/HowItWorksFlow';
@@ -15,6 +16,7 @@ import {
   Lock,
   FileCheck,
   ArrowRight,
+  Play,
   Github,
   Twitter,
   Mail,
@@ -34,37 +36,83 @@ export default function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="container mx-auto px-6 py-6"
+          role="navigation"
+          aria-label="Main navigation"
         >
+          {/* Skip to main content - Accessibility */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4
+                       focus:px-4 focus:py-2 focus:bg-accent-primary focus:text-background focus:rounded-lg"
+          >
+            Skip to main content
+          </a>
+
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            {/* Logo - Now clickable */}
+            <a
+              href="#"
+              className="flex items-center gap-2 min-h-[44px] rounded-lg
+                         focus-visible:outline-2 focus-visible:outline-accent-primary
+                         focus-visible:outline-offset-2"
+              aria-label="Dimini - Home"
+            >
               <Network className="w-8 h-8 text-accent-primary" strokeWidth={1.5} />
               <span className="font-display text-2xl font-bold">Dimini</span>
-            </div>
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-text-secondary hover:text-text-primary transition-colors">
+            </a>
+
+            {/* Desktop Navigation - Enhanced spacing & professional typography */}
+            <div className="hidden md:flex items-center">
+              <a
+                href="#features"
+                className="relative px-6 py-3 mr-8 text-base font-semibold tracking-wide
+                           text-text-secondary hover:text-text-primary
+                           transition-colors duration-200
+                           after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
+                           after:bg-accent-primary after:transition-all after:duration-200
+                           hover:after:w-full"
+              >
                 Features
               </a>
-              <a href="#how-it-works" className="text-text-secondary hover:text-text-primary transition-colors">
+              <a
+                href="#how-it-works"
+                className="relative px-6 py-3 mr-8 text-base font-semibold tracking-wide
+                           text-text-secondary hover:text-text-primary
+                           transition-colors duration-200
+                           after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
+                           after:bg-accent-primary after:transition-all after:duration-200
+                           hover:after:w-full"
+              >
                 How It Works
               </a>
-              <a href="#security" className="text-text-secondary hover:text-text-primary transition-colors">
+              <a
+                href="#security"
+                className="relative px-6 py-3 text-base font-semibold tracking-wide
+                           text-text-secondary hover:text-text-primary
+                           transition-colors duration-200
+                           after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
+                           after:bg-accent-primary after:transition-all after:duration-200
+                           hover:after:w-full"
+              >
                 Security
               </a>
             </div>
-            <Button variant="outline" size="sm">
+
+            {/* CTA Button - WCAG compliant sizing */}
+            <Button variant="outline" size="default" aria-label="Request a product demo">
               Request Demo
             </Button>
           </div>
         </motion.nav>
 
         {/* Hero Section */}
-        <section className="container mx-auto px-6 py-24 md:py-32">
+        <section id="main-content" className="container mx-auto px-6 pt-32 pb-24 md:pt-40 md:pb-32">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="space-y-8"
+              className="space-y-12"
             >
               <div className="space-y-6">
                 <motion.div
@@ -79,7 +127,7 @@ export default function HomePage() {
                   </span>
                 </motion.div>
 
-                <h1 className="font-display text-5xl md:text-7xl font-bold leading-tight tracking-tight text-balance">
+                <h1 className="font-display text-5xl md:text-7xl font-bold leading-[1.3] tracking-tight text-balance">
                   Illuminate the{' '}
                   <span className="text-accent-primary">Landscape</span> of Human
                   Conversation
@@ -95,13 +143,14 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="flex flex-col sm:flex-row gap-4"
+                className="flex flex-col sm:flex-row gap-5 sm:gap-6"
               >
-                <Button variant="warm" size="lg" className="group">
+                <Button variant="default" size="lg" className="group font-semibold">
                   Get Started
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className="group">
+                  <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Watch Overview
                 </Button>
               </motion.div>
@@ -131,36 +180,9 @@ export default function HomePage() {
             >
               <div className="relative aspect-square">
                 {/* Semantic Network Demo */}
-                <Card className="absolute inset-0 overflow-hidden glass">
-                  <div className="absolute inset-0 p-8">
-                    <SemanticNetworkDemo />
-                  </div>
-                </Card>
-
-                {/* Floating Stats */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 1 }}
-                  className="absolute -left-8 top-1/4"
-                >
-                  <Card className="glass p-4 backdrop-blur-md">
-                    <div className="text-xs text-text-tertiary mb-1">Topics</div>
-                    <div className="text-2xl font-display font-bold text-node-topic">12</div>
-                  </Card>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 1.2 }}
-                  className="absolute -right-8 bottom-1/4"
-                >
-                  <Card className="glass p-4 backdrop-blur-md">
-                    <div className="text-xs text-text-tertiary mb-1">Emotions</div>
-                    <div className="text-2xl font-display font-bold text-node-emotion">8</div>
-                  </Card>
-                </motion.div>
+                <div className="absolute inset-0 p-8">
+                  <SemanticNetworkDemo />
+                </div>
               </div>
             </motion.div>
           </div>

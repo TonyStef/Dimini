@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LogOut, Users, Settings, Activity, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -125,18 +126,22 @@ export default function DashboardPage() {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Patients Card */}
-            <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-not-allowed">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-lg bg-accent-primary/10">
-                  <Users className="w-6 h-6 text-accent-primary" />
+            <Link href="/patients">
+              <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-pointer">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-lg bg-accent-primary/10">
+                    <Users className="w-6 h-6 text-accent-primary" />
+                  </div>
+                  <h4 className="font-semibold text-text-primary">Patients</h4>
                 </div>
-                <h4 className="font-semibold text-text-primary">Patients</h4>
-              </div>
-              <p className="text-sm text-text-secondary mb-4">
-                Manage your patient list and view session history
-              </p>
-              <p className="text-xs text-accent-warm">Coming soon</p>
-            </Card>
+                <p className="text-sm text-text-secondary mb-4">
+                  Manage your patient list and view session history
+                </p>
+                <Button size="sm" className="w-full">
+                  View Patients
+                </Button>
+              </Card>
+            </Link>
 
             {/* Sessions Card */}
             <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-not-allowed">

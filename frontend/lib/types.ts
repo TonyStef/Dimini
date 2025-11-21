@@ -31,14 +31,56 @@ export interface RegisterData {
 // Patient Types
 // ========================================
 
+export type Gender = 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | 'other';
+
+export interface PatientDemographics {
+  age?: number;
+  gender?: Gender;
+  occupation?: string;
+  referral_source?: string;
+  initial_concerns?: string[];
+}
+
 export interface Patient {
   id: string;
+  therapist_id: string;
   name: string;
   email?: string;
   phone?: string;
-  demographics?: Record<string, any>;
+  demographics?: PatientDemographics;
   created_at: string;
   updated_at: string;
+}
+
+export interface PatientCreate {
+  name: string;
+  email?: string;
+  phone?: string;
+  demographics?: PatientDemographics;
+}
+
+export interface PatientUpdate {
+  name?: string;
+  email?: string;
+  phone?: string;
+  demographics?: PatientDemographics;
+}
+
+export interface PatientStats {
+  total_sessions: number;
+  active_sessions: number;
+  last_session_date?: string;
+}
+
+export interface PatientDetail extends Patient {
+  stats: PatientStats;
+}
+
+export interface PatientListResponse {
+  patients: Patient[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // ========================================

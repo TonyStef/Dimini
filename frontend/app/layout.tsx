@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PatientsProvider } from "@/contexts/PatientsContext";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 // ========================================
@@ -39,7 +41,10 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen">
         <AuthProvider>
-          {children}
+          <PatientsProvider>
+            {children}
+            <Toaster position="top-right" richColors closeButton />
+          </PatientsProvider>
         </AuthProvider>
       </body>
     </html>

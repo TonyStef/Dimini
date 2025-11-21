@@ -1,5 +1,16 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { AuthResponse, User, RegisterData, APIError } from './types';
+import {
+  AuthResponse,
+  User,
+  RegisterData,
+  APIError,
+  Patient,
+  PatientCreate,
+  PatientUpdate,
+  PatientListResponse,
+  PatientDetail,
+  Session
+} from './types';
 
 // ========================================
 // Axios Instance Configuration
@@ -106,6 +117,89 @@ export const authAPI = {
    */
   async logout(): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>('/api/auth/logout');
+    return response.data;
+  },
+};
+
+// ========================================
+// Patients API Functions
+// ========================================
+
+export interface PatientsListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  sort_by?: 'name' | 'created_at' | 'last_session';
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface SessionsListParams {
+  page?: number;
+  page_size?: number;
+  status?: 'active' | 'completed' | 'cancelled';
+}
+
+export const patientsAPI = {
+  /**
+   * Get list of patients with pagination and filtering
+   */
+  async list(params?: PatientsListParams): Promise<PatientListResponse> {
+    const response = await api.get<PatientListResponse>('/api/patients', { params });
+    return response.data;
+  },
+
+  /**
+   * Create a new patient
+   */
+  async create(data: PatientCreate): Promise<Patient> {
+    const response = await api.post<Patient>('/api/patients', data);
+    return response.data;
+  },
+
+  /**
+   * Get patient details with stats
+   */
+  async get(patientId: string): Promise<PatientDetail> {
+    const response = await api.get<PatientDetail>(`/api/patients/${patientId}`);
+    return response.data;
+  },
+
+  /**
+   * Update patient information
+   */
+  async update(patientId: string, data: PatientUpdate): Promise<Patient> {
+    const response = await api.patch<Patient>(`/api/patients/${patientId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete a patient
+   * Returns 400 error if patient has active sessions
+   */
+  async delete(patientId: string): Promise<{ message: string }> {
+    const response = await api.delete<{ message: string }>(`/api/patients/${patientId}`);
+    return response.data;
+  },
+
+  /**
+   * Start a new session for a patient
+   */
+  async startSession(patientId: string): Promise<Session> {
+    const response = await api.post<Session>(`/api/patients/${patientId}/sessions/start`);
+    return response.data;
+  },
+
+  /**
+   * Get session history for a patient
+   */
+  async getSessions(patientId: string, params?: SessionsListParams): Promise<{
+    sessions: Session[];
+    total: number;
+  }> {
+    const response = await api.get<{ sessions: Session[]; total: number }>(
+      `/api/patients/${patientId}/sessions`,
+      { params }
+    );
     return response.data;
   },
 };

@@ -508,8 +508,14 @@ export default function HomePage() {
             <div className="grid md:grid-cols-4 gap-12">
               {/* Brand */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Network className="w-6 h-6 text-accent-primary" strokeWidth={1.5} />
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/logo.webp"
+                    alt="Dimini logo"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-lg shadow-accent-primary/20 shadow-lg"
+                  />
                   <span className="font-display text-xl font-bold">Dimini</span>
                 </div>
                 <p className="text-sm text-text-secondary">
@@ -551,9 +557,18 @@ export default function HomePage() {
             </div>
 
             <div className="mt-12 pt-8 border-t border-border-subtle flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-sm text-text-tertiary">
-                © 2025 Dimini. All rights reserved.
-              </p>
+              <div className="flex items-center gap-2">
+                <Image 
+                  src="/logo.webp" 
+                  alt="Dimini Logo" 
+                  width={24} 
+                  height={24} 
+                  className="w-6 h-6 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300"
+                />
+                <p className="text-sm text-text-tertiary">
+                  © 2025 Dimini. All rights reserved.
+                </p>
+              </div>
             </div>
           </div>
         </footer>

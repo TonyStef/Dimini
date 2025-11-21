@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NavLink } from '@/components/NavLink';
@@ -9,6 +11,7 @@ import AnimatedGraphBackground from '@/components/AnimatedGraphBackground';
 import FeatureCard from '@/components/FeatureCard';
 import HowItWorksFlow from '@/components/HowItWorksFlow';
 import SemanticNetworkDemo from '@/components/SemanticNetworkDemo';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Network,
   Brain,
@@ -21,9 +24,13 @@ import {
   Github,
   Twitter,
   Mail,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 
 export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   return (
     <div className="relative min-h-screen bg-background text-text-primary">
       {/* Animated Background */}
@@ -105,10 +112,35 @@ export default function HomePage() {
               </a>
             </div>
 
-            {/* CTA Button - WCAG compliant sizing */}
-            <Button variant="outline" size="default" aria-label="Request a product demo">
-              Request Demo
-            </Button>
+            {/* Auth Buttons - Conditional based on authentication state */}
+            {!isLoading && (
+              <div className="flex items-center gap-4">
+                {isAuthenticated ? (
+                  <Button
+                    variant="default"
+                    size="default"
+                    onClick={() => router.push('/dashboard')}
+                  >
+                    Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Link href="/login">
+                      <Button variant="ghost" size="default">
+                        <LogIn className="w-4 h-4" />
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/register">
+                      <Button variant="default" size="default">
+                        <UserPlus className="w-4 h-4" />
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </motion.nav>
 

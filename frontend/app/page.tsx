@@ -43,7 +43,7 @@ export default function HomePage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="container mx-auto px-6 py-6"
+          className="container mx-auto px-6 py-4"
           role="navigation"
           aria-label="Main navigation"
         >
@@ -58,28 +58,30 @@ export default function HomePage() {
 
           <div className="flex items-center justify-between">
             {/* Logo - Now clickable */}
-            <a
-              href="#"
-              className="flex items-center gap-3 min-h-[44px] rounded-lg
-                         focus-visible:outline-2 focus-visible:outline-accent-primary
-                         focus-visible:outline-offset-2"
-              aria-label="Dimini - Home"
-            >
-              <img
-                src="/forweb.svg"
-                alt="Dimini mark"
-                className="w-10 h-10 text-current"
-                style={{ width: '2.5rem', height: '2.5rem' }}
-                loading="lazy"
-              />
-              <span className="font-display text-2xl font-bold">Dimini</span>
-            </a>
+            <div className="flex-1 flex justify-start">
+              <a
+                href="#"
+                className="flex items-center gap-3 min-h-[44px] rounded-lg
+                           focus-visible:outline-2 focus-visible:outline-accent-primary
+                           focus-visible:outline-offset-2"
+                aria-label="Dimini - Home"
+              >
+                <img
+                  src="/forweb.svg"
+                  alt="Dimini mark"
+                  className="w-8 h-8 text-current"
+                  style={{ width: '2rem', height: '2rem' }}
+                  loading="lazy"
+                />
+                <span className="font-display text-xl font-bold">Dimini</span>
+              </a>
+            </div>
 
             {/* Desktop Navigation - Enhanced spacing & professional typography */}
-            <div className="hidden md:flex items-center gap-12">
+            <div className="hidden md:flex items-center justify-center gap-8">
               <a
                 href="#features"
-                className="relative py-3 text-lg font-bold tracking-wide
+                className="relative py-2 text-sm font-medium tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -90,7 +92,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#how-it-works"
-                className="relative py-3 text-lg font-bold tracking-wide
+                className="relative py-2 text-sm font-medium tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -101,7 +103,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#security"
-                className="relative py-3 text-lg font-bold tracking-wide
+                className="relative py-2 text-sm font-medium tracking-wide
                            text-text-secondary hover:text-text-primary
                            transition-colors duration-200
                            after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0
@@ -113,39 +115,41 @@ export default function HomePage() {
             </div>
 
             {/* Auth Buttons - Conditional based on authentication state */}
-            {!isLoading && (
-              <div className="flex items-center gap-4">
-                {isAuthenticated ? (
-                  <Button
-                    variant="default"
-                    size="default"
-                    onClick={() => router.push('/dashboard')}
-                  >
-                    Dashboard
-                  </Button>
-                ) : (
-                  <>
-                    <Link href="/login">
-                      <Button variant="ghost" size="default">
-                        <LogIn className="w-4 h-4" />
-                        Login
-                      </Button>
-                    </Link>
-                    <Link href="/register">
-                      <Button variant="default" size="default">
-                        <UserPlus className="w-4 h-4" />
-                        Sign Up
-                      </Button>
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="flex-1 flex justify-end">
+              {!isLoading && (
+                <div className="flex items-center gap-4">
+                  {isAuthenticated ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => router.push('/dashboard')}
+                    >
+                      Dashboard
+                    </Button>
+                  ) : (
+                    <>
+                      <Link href="/login">
+                        <Button variant="ghost" size="sm">
+                          <LogIn className="w-4 h-4" />
+                          Login
+                        </Button>
+                      </Link>
+                      <Link href="/register">
+                        <Button variant="default" size="sm">
+                          <UserPlus className="w-4 h-4" />
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </motion.nav>
 
         {/* Hero Section */}
-        <section id="main-content" className="container mx-auto px-6 pt-32 pb-24 md:pt-44 md:pb-32">
+        <section id="main-content" className="container mx-auto px-6 pt-24 pb-24 md:pt-32 md:pb-32">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -166,13 +170,13 @@ export default function HomePage() {
                   </span>
                 </motion.div>
 
-                <h1 className="font-display text-5xl md:text-7xl font-bold leading-[1.3] tracking-tight text-balance">
+                <h1 className="font-display text-4xl md:text-6xl font-bold leading-[1.3] tracking-tight text-balance">
                   Illuminate the{' '}
                   <span className="text-accent-primary">Landscape</span> of Human
                   Conversation
                 </h1>
 
-                <p className="text-xl md:text-2xl text-text-secondary leading-relaxed text-balance max-w-2xl">
+                <p className="text-lg md:text-xl text-text-secondary leading-relaxed text-balance max-w-2xl">
                   Real-time semantic relationship visualization for therapy sessions.
                   Watch topics, emotions, and connections emerge as conversations unfold.
                 </p>
@@ -184,11 +188,11 @@ export default function HomePage() {
                 transition={{ duration: 0.6, delay: 0.5 }}
                 className="flex flex-col sm:flex-row gap-5 sm:gap-8"
               >
-                <Button variant="default" size="xl" className="group font-bold text-lg px-10">
+                <Button variant="default" size="lg" className="group font-bold text-lg px-8">
                   Get Started
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button variant="ghost" size="xl" className="group text-lg px-10">
+                <Button variant="ghost" size="lg" className="group text-lg px-8">
                   <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
                   Watch Overview
                 </Button>

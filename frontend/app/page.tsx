@@ -188,7 +188,7 @@ export default function HomePage() {
                   Get Started
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button variant="outline" size="xl" className="group text-lg px-10">
+                <Button variant="ghost" size="xl" className="group text-lg px-10">
                   <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
                   Watch Overview
                 </Button>
@@ -552,19 +552,8 @@ export default function HomePage() {
 
             <div className="mt-12 pt-8 border-t border-border-subtle flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm text-text-tertiary">
-                © 2024 Dimini. All rights reserved.
+                © 2025 Dimini. All rights reserved.
               </p>
-              <div className="flex items-center gap-4">
-                <a href="#" className="text-text-tertiary hover:text-text-primary transition-colors">
-                  <Github className="w-5 h-5" />
-                </a>
-                <a href="#" className="text-text-tertiary hover:text-text-primary transition-colors">
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a href="#" className="text-text-tertiary hover:text-text-primary transition-colors">
-                  <Mail className="w-5 h-5" />
-                </a>
-              </div>
             </div>
           </div>
         </footer>

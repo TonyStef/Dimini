@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NavLink } from '@/components/NavLink';
@@ -57,7 +58,13 @@ export default function HomePage() {
                          focus-visible:outline-offset-2"
               aria-label="Dimini - Home"
             >
-              <Network className="w-8 h-8 text-accent-primary" strokeWidth={1.5} />
+              <Image 
+                src="/logo.webp" 
+                alt="Dimini Logo" 
+                width={32} 
+                height={32} 
+                className="w-8 h-8"
+              />
               <span className="font-display text-2xl font-bold">Dimini</span>
             </a>
 
@@ -106,13 +113,13 @@ export default function HomePage() {
         </motion.nav>
 
         {/* Hero Section */}
-        <section id="main-content" className="container mx-auto px-6 pt-48 pb-24 md:pt-64 md:pb-32">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <section id="main-content" className="container mx-auto px-6 pt-32 pb-24 md:pt-44 md:pb-32">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="space-y-16"
+              className="space-y-12"
             >
               <div className="space-y-8">
                 <motion.div

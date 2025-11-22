@@ -58,13 +58,13 @@ Do not include any other text, explanations, or markdown formatting. Just the ra
             logger.info(f"Extracting entities from chunk: {transcript_chunk[:100]}...")
 
             response = client.chat.completions.create(
-                model="moonshotai/Kimi-K2-Thinking",
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"Extract entities from this therapy conversation:\n\n{transcript_chunk}"}
                 ],
                 temperature=0.3,  # Low temperature for consistent extraction
-                max_tokens=2000  # Increased for thinking model (reasoning + answer)
+                max_tokens=1000  # Sufficient for direct JSON output
             )
 
             # Parse JSON response

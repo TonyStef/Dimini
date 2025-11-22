@@ -46,13 +46,11 @@ async def execute_save_note(session_id: str, params: Dict) -> Dict:
             source="ai_agent"
         )
 
-        # [2] Process for KG (async, non-blocking)
-        asyncio.create_task(
-            kg_integration.process_note_for_kg(
-                session_id=session_id,
-                note_content=params["note"],
-                category=params["category"]
-            )
+        # [2] Process for KG (await completion to ensure entities are in Neo4j)
+        await kg_integration.process_note_for_kg(
+            session_id=session_id,
+            note_content=params["note"],
+            category=params["category"]
         )
 
         return {

@@ -45,7 +45,7 @@ class ToolKGIntegration:
             category: "insight", "observation", "concern", "progress"
         """
         try:
-            logger.info(f"Processing note for KG: {category}")
+            logger.info(f"[KG-DEBUG] Processing note for KG: {category}, session_id: {session_id}")
 
             # Extract entities from note text
             extraction_result = await self.extractor.extract(note_content)
@@ -106,6 +106,15 @@ class ToolKGIntegration:
                 existing_node_data.append(node_data)
 
             logger.info(f"KG updated: {len(entities)} entities from note")
+
+            # Verify entities were stored in Neo4j
+            verify_query = """
+            MATCH (e:Entity {session_id: $session_id})
+            RETURN count(e) AS entity_count
+            """
+            verify_result = neo4j_client.execute_query(verify_query, {"session_id": session_id})
+            verified_count = verify_result[0]['entity_count'] if verify_result else 0
+            logger.info(f"[KG-DEBUG] Verified {verified_count} entities in Neo4j for session {session_id}")
 
         except Exception as e:
             logger.error(f"Error processing note for KG: {e}", exc_info=True)

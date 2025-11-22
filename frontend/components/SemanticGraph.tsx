@@ -102,6 +102,11 @@ export default function SemanticGraph({
         warmupTicks={100}  // Pre-stabilize before render
         cooldownTime={5000}  // Stop physics after 5s
 
+        // Force simulation configuration (stronger forces for better spacing)
+        d3ForceCharge={() => -800}  // Strong repulsion between nodes
+        d3ForceLink={(link) => link.value ? 100 / link.value : 100}  // Larger link distance
+        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.1 })}  // Stronger centering
+
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {
           // If graph has >200 nodes, only show important ones
@@ -125,7 +130,7 @@ export default function SemanticGraph({
           ctx.fill();
 
           // Draw label (only if zoomed in enough)
-          if (globalScale > 1.5) {
+          if (globalScale > 0.8) {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';

@@ -57,7 +57,7 @@ export const useHumeWebSocket = (configId: string) => {
         setState({ connected: false, error: null, status: 'disconnected' });
       };
 
-      // Send session settings (match what we're sending: webm)
+      // Send session settings (match actual audio format: webm)
       ws.send(JSON.stringify({
         type: 'session_settings',
         audio: {

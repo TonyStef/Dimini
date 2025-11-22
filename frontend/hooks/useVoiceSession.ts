@@ -104,7 +104,8 @@ export const useVoiceSession = (
           // Send transcript to backend for entity extraction & KG building
           // NOTE: Quick Start sessions ('quick-start-session') will get 404 from backend
           // For full KG functionality, use a real patient session
-          if (content) {
+          // FILTER: Only send REAL speech (not injected context)
+          if (content && !content.startsWith('Patient Name:')) {
             try {
               const token = localStorage.getItem('token');
               await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/transcript`, {
@@ -121,6 +122,8 @@ export const useVoiceSession = (
               // If this is a quick-start session, the backend will return 404
               // User should use a real patient session to see the KG build
             }
+          } else if (content && content.startsWith('Patient Name:')) {
+            console.log('[KG] Skipping context injection from transcript');
           }
           break;
 

@@ -64,13 +64,8 @@ export default function LiveSessionView({
       startSession();
     }
 
-    return () => {
-      // Only cleanup if we actually initialized
-      if (sessionInitializedRef.current) {
-        endSession();
-      }
-    };
-  }, [startSession, endSession]);
+    // No cleanup - session ends only via explicit "End Session" button
+  }, [startSession]);
 
   useEffect(() => {
     const interval = setInterval(() => {

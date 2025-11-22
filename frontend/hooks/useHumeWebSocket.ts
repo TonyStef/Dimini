@@ -57,11 +57,11 @@ export const useHumeWebSocket = (configId: string) => {
         setState({ connected: false, error: null, status: 'disconnected' });
       };
 
-      // Send session settings (match Hume config: linear16, 48kHz mono)
+      // Send session settings (match what we're sending: webm)
       ws.send(JSON.stringify({
         type: 'session_settings',
         audio: {
-          encoding: 'linear16',
+          encoding: 'webm',
           sample_rate: 48000,
           channels: 1
         }
@@ -100,18 +100,33 @@ export const useHumeWebSocket = (configId: string) => {
    * Send audio data to Hume
    */
   const sendAudio = useCallback(async (audioBlob: Blob) => {
+    console.log(`[HUME] Sending: ${audioBlob.size} bytes, ${audioBlob.type}`);
+
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.warn('HUME: WebSocket not ready');
+      console.error('[HUME] WebSocket NOT READY:', wsRef.current?.readyState);
       return;
     }
 
-    // Convert Blob to base64
-    const base64Audio = await blobToBase64(audioBlob);
+    console.log('[HUME] WebSocket is OPEN, converting to base64...');
 
-    wsRef.current.send(JSON.stringify({
-      type: 'audio_input',
-      data: base64Audio
-    }));
+    // Simple blob to base64 - NO CONVERSION NEEDED!
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1]; // Remove "data:audio/webm;base64," prefix
+      console.log(`[HUME] Base64 length: ${base64.length}, sending to Hume...`);
+
+      wsRef.current!.send(JSON.stringify({
+        type: 'audio_input',
+        data: base64
+      }));
+
+      console.log('[HUME] Audio SENT to Hume');
+    };
+    reader.onerror = (err) => {
+      console.error('HUME: Failed to read audio blob:', err);
+    };
+    reader.readAsDataURL(audioBlob);
   }, []);
 
   /**
@@ -149,18 +164,3 @@ export const useHumeWebSocket = (configId: string) => {
   };
 };
 
-/**
- * Helper: Convert Blob to base64 (without data URL prefix)
- */
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(',')[1]; // Remove "data:audio/webm;base64," prefix
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}

@@ -490,21 +490,38 @@ async def get_patient_context(
         )
 
     try:
-        # Initialize PatientService with required parameters
-        api_url = f"http://{settings.HOST}:{settings.PORT}/api"
-        patient_service = PatientService(api_url=api_url, therapist_id=current_user.id)
-        patient_history = await patient_service.fetch_patient_history(patient_id)
-        context_text = patient_service.format_history_for_context(patient_history)
-
+        # Generate context directly from patient data
+        context_text = f"Patient Name: {patient.name}"
+        
+        if patient.email:
+            context_text += f"\nEmail: {patient.email}"
+        
+        if patient.demographics:
+            demographics = patient.demographics if isinstance(patient.demographics, dict) else {}
+            if demographics.get('age'):
+                context_text += f"\nAge: {demographics['age']}"
+            if demographics.get('primaryConcerns'):
+                context_text += f"\nPrimary Concerns: {demographics['primaryConcerns']}"
+        
+        # Add session count for context
+        session_count = await db.session.count(
+            where={"patientId": patient_id}
+        )
+        context_text += f"\nTotal Sessions: {session_count}"
+        
         logger.info(f"Generated context for patient {patient_id}, length: {len(context_text)}")
 
         return {
             "context_text": context_text,
-            "patient_name": patient_history.get("name", "Unknown")
+            "patient_name": patient.name
         }
     except Exception as e:
         logger.error(f"Failed to generate patient context: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate context: {str(e)}")
+        # Return basic context instead of failing
+        return {
+            "context_text": f"Patient: {patient.name}",
+            "patient_name": patient.name
+        }
 
 # Background task for summary generation
 async def generate_session_summary_task(session_id: str):

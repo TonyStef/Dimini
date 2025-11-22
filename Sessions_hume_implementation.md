@@ -182,7 +182,7 @@ async def get_patient_context_text(patient_id: str):
 
 **Testing:**
 ```bash
-curl http://localhost:8000/api/patients/{patient_id}/context
+curl http://localhost:8000/api/sessions/patients/{patient_id}/context
 ```
 
 **Acceptance Criteria:**

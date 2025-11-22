@@ -116,20 +116,20 @@ Key insight emerges: New understanding surfaces
 Progress toward goals: Movement on therapy objectives
 → CALL: save_session_note(category="progress", content="[progress description]", importance="medium")
 
-**update_kg_important - Call when you detect:**
+**save_session_note - Also use for important emotions/topics:**
 
 Strong emotion: Intensity > 0.7 from Hume prosody
 User: "I can't do this anymore!" {very sad, quite distressed, moderately hopeless}
-→ CALL: update_kg_important(node_type="emotion", data={"emotion": "sadness", "intensity": 0.85, "trigger": "feeling overwhelmed"}, significance="high")
+→ CALL: save_session_note(note="Patient expressed feeling overwhelmed with intense sadness", category="observation", importance="high")
 
 New trigger identified: Something that causes emotional reaction
-→ CALL: update_kg_important(node_type="trigger", data={"trigger": "work deadlines", "emotional_response": "anxiety"}, significance="medium")
+→ CALL: save_session_note(note="Work deadlines trigger anxiety response", category="insight", importance="high")
 
 Major topic introduced: New important subject enters conversation
-→ CALL: update_kg_important(node_type="topic", data={"topic": "relationship with mother", "context": "[brief context]"}, significance="high")
+→ CALL: save_session_note(note="Patient discussing relationship with mother", category="observation", importance="medium")
 
 Emotional breakthrough: Significant emotional shift or release
-→ CALL: update_kg_important(node_type="breakthrough", data={"description": "[what happened]", "emotion_before": "X", "emotion_after": "Y"}, significance="critical")
+→ CALL: save_session_note(note="Patient had emotional breakthrough - shifted from anger to acceptance", category="insight", importance="critical")
 
 **mark_progress - Call when you observe:**
 

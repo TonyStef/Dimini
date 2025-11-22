@@ -47,8 +47,11 @@ export const useAudioCapture = () => {
 
       // Handle audio data chunks (80ms interval)
       recorder.ondataavailable = (event) => {
+        console.log(`[Audio] Captured: ${event.data.size} bytes, ${event.data.type}`);
         if (event.data.size > 0) {
           onAudioData(event.data);
+        } else {
+          console.warn('[Audio] Empty audio chunk!');
         }
       };
 

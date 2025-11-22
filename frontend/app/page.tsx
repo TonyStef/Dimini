@@ -182,37 +182,54 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="flex flex-col sm:flex-row gap-5 sm:gap-8"
-              >
-                <Button variant="default" size="lg" className="group font-bold text-lg px-8">
-                  Get Started
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button variant="ghost" size="lg" className="group text-lg px-8">
-                  <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  Watch Overview
-                </Button>
-              </motion.div>
+              {/* Aligned Buttons & Trust Badges */}
+              <div className="grid sm:grid-cols-[auto_auto] gap-x-8 gap-y-6 justify-start">
+                {/* Button 1 */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                >
+                  <Button variant="default" size="lg" className="group font-bold text-lg px-8 w-full sm:w-auto">
+                    Get Started
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.7 }}
-                className="flex items-center gap-6 pt-8 text-sm text-text-tertiary"
-              >
-                <div className="flex items-center gap-2">
+                {/* Button 2 */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                >
+                  <Button variant="ghost" size="lg" className="group text-lg px-8 w-full sm:w-auto">
+                    <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                    Watch Overview
+                  </Button>
+                </motion.div>
+
+                {/* Trust 1 - Aligned under Button 1 */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
+                  className="flex items-center gap-2 text-sm text-text-tertiary justify-center sm:justify-start pl-8"
+                >
                   <Shield className="w-5 h-5 text-success" />
                   <span>HIPAA Ready</span>
-                </div>
-                <div className="flex items-center gap-2">
+                </motion.div>
+
+                {/* Trust 2 - Aligned under Button 2 */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
+                  className="flex items-center gap-2 text-sm text-text-tertiary justify-center sm:justify-start pl-8"
+                >
                   <Lock className="w-5 h-5 text-success" />
                   <span>End-to-End Encrypted</span>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </motion.div>
 
             <motion.div

@@ -35,11 +35,13 @@ export default function SemanticGraph({
   highlightMetric = 'pagerank'
 }: SemanticGraphProps) {
   const graphRef = useRef<any>();
+  const hasZoomedRef = useRef(false);
 
-  // Auto-fit graph when new nodes appear
+  // Auto-fit graph ONCE on initial load (prevent jarring re-zoom on new nodes)
   useEffect(() => {
-    if (graphRef.current && graphData.nodes.length > 0) {
-      graphRef.current.zoomToFit(400, 50);
+    if (graphRef.current && graphData.nodes.length > 0 && !hasZoomedRef.current) {
+      graphRef.current.zoomToFit(400, 200);  // Increased padding: 50px → 200px
+      hasZoomedRef.current = true;
     }
   }, [graphData.nodes.length]);
 
@@ -89,22 +91,22 @@ export default function SemanticGraph({
         nodeRelSize={1}
         nodeVal={getNodeSize}
         nodeColor={getNodeColor}
-        linkWidth={link => (link.value || 0.75) * 3}
+        linkWidth={link => (link.value || 0.75) * 0.5}  // Thin links like demo (was * 3)
         linkDirectionalParticles={2}
         linkDirectionalParticleSpeed={0.005}
         backgroundColor="#020617"
         linkColor={() => '#64748b'}
 
         // PERFORMANCE OPTIMIZATIONS:
-        // 1. Faster physics convergence
-        d3AlphaDecay={0.05}  // Faster convergence (was 0.02)
-        d3VelocityDecay={0.4}  // More damping (was 0.3)
-        warmupTicks={100}  // Pre-stabilize before render
-        cooldownTime={5000}  // Stop physics after 5s
+        // 1. SLOWER physics convergence (gives nodes time to spread out)
+        d3AlphaDecay={0.01}  // 5x slower - more time to spread (was 0.05)
+        d3VelocityDecay={0.3}  // Less damping - allows more movement (was 0.4)
+        warmupTicks={300}  // 3x more pre-stabilization (was 100)
+        cooldownTime={15000}  // 15 seconds to settle properly (was 5000)
 
         // Force simulation configuration (match demo appearance)
-        d3ForceCharge={() => -1500}  // Very strong repulsion to spread nodes out
-        d3ForceLink={(link) => link.value ? 150 / link.value : 150}  // Large link distances
+        d3ForceCharge={() => -2500}  // 67% stronger repulsion (was -1500)
+        d3ForceLink={(link) => link.value ? 200 / link.value : 200}  // 33% longer links (was 150)
         d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.03 })}  // Weak centering for better distribution
 
         // 2. Node visibility filtering for large graphs
@@ -116,20 +118,29 @@ export default function SemanticGraph({
           return true;
         }}
 
-        // 3. Canvas rendering (faster than SVG)
+        // 3. Canvas rendering with glow effects (matches landing page demo)
         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
-          ctx.font = `${fontSize}px Sans-Serif`;
-
-          // Draw node circle
           const size = getNodeSize(node);
-          ctx.fillStyle = getNodeColor(node);
+          const color = getNodeColor(node);
+
+          // Draw glow halo (like demo)
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.15;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size + 5, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // Draw main node circle
+          ctx.globalAlpha = 1.0;
+          ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
           ctx.fill();
 
           // Draw label (always visible like demo)
+          ctx.font = `${fontSize}px Sans-Serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillStyle = '#fff';

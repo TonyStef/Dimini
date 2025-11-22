@@ -100,14 +100,28 @@ export interface Session {
 }
 
 // ========================================
-// Graph Types
+// Graph Types (Neo4j Knowledge Graph)
 // ========================================
 
+/**
+ * Graph node with multi-tier metrics
+ *
+ * Metrics system:
+ * - Weighted Degree: Instant (<5ms), sum of similarity scores
+ * - PageRank: Core issues (10s updates), graph importance
+ * - Betweenness: Emotional triggers (60s updates), bridge topics
+ */
 export interface GraphNode {
   id: string;  // node_id
   label: string;
   type: 'topic' | 'emotion';
   group: number;  // For coloring: 1 = emotion, 2 = topic
+
+  // Multi-tier metrics (Neo4j)
+  weightedDegree?: number;
+  pagerank?: number;
+  betweenness?: number;
+  mentionCount?: number;
 }
 
 export interface GraphEdge {
@@ -119,6 +133,43 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   links: GraphEdge[];
+}
+
+/**
+ * Multi-tier session insights from Neo4j graph algorithms
+ */
+export interface SessionInsights {
+  realTime: {
+    description: string;
+    topEntities: Array<{
+      label: string;
+      type: string;
+      weightedDegree: number;
+      mentionCount: number;
+    }>;
+    latency: string;
+  };
+  coreIssues: {
+    description: string;
+    topEntities: Array<{
+      label: string;
+      type: string;
+      pagerank: number;
+      mentionCount: number;
+    }>;
+    lastUpdated: string;
+    updateFrequency: string;
+  };
+  emotionalTriggers: {
+    description: string;
+    topEntities: Array<{
+      label: string;
+      type: string;
+      betweenness: number;
+    }>;
+    lastUpdated: string;
+    updateFrequency: string;
+  };
 }
 
 // ========================================

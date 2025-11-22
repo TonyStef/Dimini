@@ -30,9 +30,19 @@ class Settings(BaseSettings):
     # OpenAI Models
     GPT_MODEL: str = "gpt-4-0125-preview"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
-    
+
+    # Hume AI
+    HUME_API_KEY: str
+    HUME_SECRET_KEY: str
+    HUME_CONFIG_ID: str
+
+    # Frontend
+    FRONTEND_URL: str = "http://localhost:3000"
+
     class Config:
-        env_file = ".env"
+        # Docker: env vars loaded via docker-compose env_file
+        # Local: reads from ../env (project root)
+        env_file = "../.env"
         env_file_encoding = "utf-8"
 
 settings = Settings()

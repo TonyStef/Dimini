@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "note": {
+      "type": "string",
+      "description": "Content of the note to save"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["insight", "observation", "concern", "progress"],
+      "description": "Category of the note"
+    },
+    "importance": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Importance level of this note"
+    }
+  },
+  "required": ["note", "category"]
+}

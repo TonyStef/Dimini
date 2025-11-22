@@ -1,0 +1,133 @@
+version: '3.8'
+
+# Local Production Testing Setup
+# Usage: docker-compose -f docker-compose.local-prod.yml up -d
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dimini_postgres_local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dimini_user -d dimini_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dimini_network
+
+  # Neo4j Graph Database
+  neo4j:
+    image: neo4j:5.14-community
+    container_name: dimini_neo4j_local
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_server_memory_heap_max__size: 2G
+      NEO4J_server_memory_pagecache_size: 1G
+      NEO4J_dbms_security_procedures_unrestricted: gds.*
+      NEO4J_dbms_security_procedures_allowlist: gds.*
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data_local:/data
+      - neo4j_logs_local:/logs
+      - neo4j_plugins_local:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dimini_network
+
+  # Backend API (FastAPI)
+  # Includes: REST API, webhooks, WebSocket, voice agent
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dimini_backend_local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL to use postgres container hostname
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    volumes:
+      # Mount code for hot reload in local-prod
+      - ./backend/app:/app/app:ro
+    # Don't mount venv or node_modules
+    command: >
+      sh -c "
+        echo 'Generating Prisma client...' &&
+        python -m prisma generate &&
+        echo 'Pushing database schema...' &&
+        python -m prisma db push --accept-data-loss &&
+        echo 'Starting backend server...' &&
+        python -m uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
+      "
+    networks:
+      - dimini_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: dimini_frontend_local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      # Mount for hot reload
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev -- -p 3000
+    networks:
+      - dimini_network
+
+volumes:
+  postgres_data_local:
+    driver: local
+  neo4j_data_local:
+    driver: local
+  neo4j_logs_local:
+    driver: local
+  neo4j_plugins_local:
+    driver: local
+
+networks:
+  dimini_network:
+    driver: bridge

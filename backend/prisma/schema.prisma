@@ -63,7 +63,7 @@ model Patient {
   email         String?
   phone         String?
   demographics  Json?    @db.Json // age, gender, occupation, etc.
-  
+
   // Relations
   sessions      Session[]
   
@@ -84,24 +84,37 @@ model Session {
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   therapistId   String   @map("therapist_id")
   therapist     User     @relation("TherapistSessions", fields: [therapistId], references: [id])
-  
+
   startedAt     DateTime @default(now()) @map("started_at")
   endedAt       DateTime? @map("ended_at")
   transcript    String   @default("") @db.Text
   summary       Json?    // AI-generated summary
   status        SessionStatus @default(ACTIVE)
-  
-  // Relations
-  graphNodes    GraphNode[]
-  graphEdges    GraphEdge[]
-  
+
+  // Hume AI integration
+  humeChatId    String?  @unique @map("hume_chat_id")
+
+  // Real-time aggregation (JSONB for fast UI reads)
+  emotionTimeline  Json?  @map("emotion_timeline") @db.Json   // [{timestamp, emotion, intensity}]
+  primaryEmotions  Json?  @map("primary_emotions") @db.Json   // {emotion: {avg_intensity, occurrences}}
+  topicsDiscussed  Json?  @map("topics_discussed") @db.Json   // ["work", "family", ...]
+  breakthroughs    Json?  @map("breakthroughs") @db.Json      // [{time, description}]
+  concernsSummary  Json?  @map("concerns_summary") @db.Json   // {high: 2, moderate: 1, urgent: 0}
+
+  // Relations - Voice Agent Tools (Phase 4)
+  notes         SessionNote[]
+  progress      SessionProgress[]
+  concerns      SessionConcern[]
+  storedSummary StoredSessionSummary?
+
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  
+
   @@index([patientId])
   @@index([therapistId])
   @@index([status])
   @@index([startedAt])
+  @@index([humeChatId])
   @@map("sessions")
 }
 
@@ -112,79 +125,142 @@ enum SessionStatus {
 }
 
 // ============================================
-// GRAPH VISUALIZATION DATA
-// ============================================
-
-model GraphNode {
-  id               String   @id @default(cuid())
-  sessionId        String   @map("session_id")
-  session          Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  
-  nodeId           String   @map("node_id") // Unique within session: "anxiety", "work_stress"
-  nodeType         NodeType @map("node_type")
-  label            String   // Display label: "Anxiety", "Work Stress"
-  embedding        Json     // Store OpenAI embedding as JSON array
-  properties       Json?    @default("{}") @db.Json
-  
-  firstMentionedAt DateTime @default(now()) @map("first_mentioned_at")
-  mentionCount     Int      @default(1) @map("mention_count")
-  
-  createdAt        DateTime @default(now()) @map("created_at")
-  
-  @@unique([sessionId, nodeId])
-  @@index([sessionId])
-  @@index([nodeType])
-  @@map("graph_nodes")
-}
-
-enum NodeType {
-  TOPIC
-  EMOTION
-}
-
-model GraphEdge {
-  id               String   @id @default(cuid())
-  sessionId        String   @map("session_id")
-  session          Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  
-  sourceNodeId     String   @map("source_node_id")
-  targetNodeId     String   @map("target_node_id")
-  similarityScore  Float    @map("similarity_score") // 0.75 to 1.0
-  relationshipType String   @default("related_to") @map("relationship_type")
-  properties       Json?    @default("{}") @db.Json
-  
-  createdAt        DateTime @default(now()) @map("created_at")
-  
-  @@unique([sessionId, sourceNodeId, targetNodeId])
-  @@index([sessionId])
-  @@index([similarityScore])
-  @@map("graph_edges")
-}
-
-// ============================================
 // AUDIT & SECURITY
 // ============================================
+// NOTE: Graph data (nodes, edges) now stored in Neo4j, not PostgreSQL
 
 model AuditLog {
   id              String   @id @default(cuid())
-  
+
   userId          String   @map("user_id")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   section         String   // 'profile', 'patient', 'session'
   action          String   // 'created', 'updated', 'deleted', 'viewed'
-  
+
   changesBefore   Json?    @map("changes_before")
   changesAfter    Json?    @map("changes_after")
-  
+
   ipAddress       String   @map("ip_address")
   userAgent       String   @map("user_agent")
-  
+
   createdAt       DateTime @default(now()) @map("created_at")
-  
+
   @@index([userId])
   @@index([section])
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================
+// VOICE AGENT TOOL DATA STORAGE (Phase 4)
+// ============================================
+
+model SessionNote {
+  id          String          @id @default(cuid())
+  sessionId   String          @map("session_id")
+  session     Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  content     String          @db.Text
+  category    NoteCategory
+  importance  ImportanceLevel
+  source      String          @default("ai_agent")
+
+  timestamp   DateTime        @default(now())
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@index([category])
+  @@index([sessionId, importance])
+  @@map("session_notes")
+}
+
+enum NoteCategory {
+  INSIGHT
+  OBSERVATION
+  CONCERN
+  PROGRESS
+}
+
+enum ImportanceLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model SessionProgress {
+  id            String       @id @default(cuid())
+  sessionId     String       @map("session_id")
+  session       Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  progressType  ProgressType @map("progress_type")
+  description   String       @db.Text
+  evidence      String?      @db.Text
+
+  flaggedAt     DateTime     @default(now()) @map("flagged_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@index([progressType])
+  @@map("session_progress")
+}
+
+enum ProgressType {
+  EMOTIONAL_REGULATION
+  INSIGHT_GAINED
+  BEHAVIORAL_CHANGE
+  COPING_SKILL
+}
+
+model SessionConcern {
+  id                  String        @id @default(cuid())
+  sessionId           String        @map("session_id")
+  session             Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  concernType         ConcernType   @map("concern_type")
+  severity            SeverityLevel
+  description         String        @db.Text
+  recommendedAction   String?       @map("recommended_action") @db.Text
+
+  flaggedAt           DateTime      @default(now()) @map("flagged_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@index([severity])
+  @@index([sessionId, severity])
+  @@map("session_concerns")
+}
+
+enum ConcernType {
+  EMOTIONAL_DISTRESS
+  RISK_BEHAVIOR
+  DETERIORATION
+  CRISIS_INDICATOR
+}
+
+enum SeverityLevel {
+  MODERATE
+  HIGH
+  URGENT
+}
+
+model StoredSessionSummary {
+  id                  String   @id @default(cuid())
+  sessionId           String   @unique @map("session_id")
+  session             Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  emotionsData        Json?    @map("emotions_data") @db.Json
+  topicsData          Json?    @map("topics_data") @db.Json
+  recommendationsData Json?    @map("recommendations_data") @db.Json
+
+  generatedAt         DateTime @default(now()) @map("generated_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("session_summaries")
 }

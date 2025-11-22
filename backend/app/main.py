@@ -1,17 +1,24 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import socketio
 import logging
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import connect_db, disconnect_db, prisma
 from app.websocket.handlers import WebSocketManager
 from app.services.realtime import RealtimeService
+from app.graph.neo4j_client import neo4j_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Create Socket.IO server
 sio = socketio.AsyncServer(
@@ -27,13 +34,15 @@ realtime_service = RealtimeService(sio)
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     # Startup
-    await connect_db()
-    logger.info("Dimini API started")
-    
+    await connect_db()  # PostgreSQL
+    neo4j_client.connect()  # Neo4j
+    logger.info("Dimini API started (PostgreSQL + Neo4j)")
+
     yield
-    
+
     # Shutdown
-    await disconnect_db()
+    await disconnect_db()  # PostgreSQL
+    neo4j_client.close()  # Neo4j
     logger.info("Dimini API shutdown")
 
 # Create FastAPI app
@@ -43,6 +52,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add CORS middleware
 app.add_middleware(
@@ -57,10 +70,12 @@ app.add_middleware(
 socket_app = socketio.ASGIApp(sio, app)
 
 # Import and include routers
-from app.api import auth, patients, sessions
+from app.api import auth, patients, sessions, webhooks, hume
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(webhooks.router, prefix="/api")
+app.include_router(hume.router, tags=["Hume AI"])
 
 @app.get("/")
 async def root():

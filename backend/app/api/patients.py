@@ -284,32 +284,32 @@ async def get_patient_session_count(
             "therapistId": current_user.id
         }
     )
-    
+
     if not patient:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found"
         )
-    
+
     # Get session counts
     total_sessions = await db.session.count(
         where={"patientId": patient_id}
     )
-    
+
     active_sessions = await db.session.count(
         where={
             "patientId": patient_id,
             "status": "ACTIVE"
         }
     )
-    
+
     completed_sessions = await db.session.count(
         where={
             "patientId": patient_id,
             "status": "COMPLETED"
         }
     )
-    
+
     return {
         "total": total_sessions,
         "active": active_sessions,

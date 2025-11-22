@@ -114,37 +114,7 @@ export default function HomePage() {
               </a>
             </div>
 
-            {/* Auth Buttons - Conditional based on authentication state */}
-            <div className="flex-1 flex justify-end">
-              {!isLoading && (
-                <div className="flex items-center gap-4">
-                  {isAuthenticated ? (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => router.push('/dashboard')}
-                    >
-                      Dashboard
-                    </Button>
-                  ) : (
-                    <>
-                      <Link href="/login">
-                        <Button variant="ghost" size="sm">
-                          <LogIn className="w-4 h-4" />
-                          Login
-                        </Button>
-                      </Link>
-                      <Link href="/register">
-                        <Button variant="default" size="sm">
-                          <UserPlus className="w-4 h-4" />
-                          Sign Up
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* Auth buttons removed - no backend for hackathon demo */}
           </div>
         </motion.nav>
 

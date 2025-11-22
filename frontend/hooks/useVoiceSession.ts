@@ -112,6 +112,11 @@ export const useVoiceSession = (
 
         case 'error':
           console.error('Hume error:', message);
+          setState(prev => ({
+            ...prev,
+            status: 'error',
+            error: message?.message ?? 'Voice session error'
+          }));
           break;
       }
     });

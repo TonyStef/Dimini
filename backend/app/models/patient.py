@@ -1,7 +1,9 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator, AliasChoices
+from pydantic import EmailStr, Field, field_validator, AliasChoices
 from datetime import datetime
 from typing import Optional, List
 from enum import Enum
+
+from app.models.base import DiminiBaseModel
 
 # ============================================================================
 # Enums
@@ -20,7 +22,7 @@ class Gender(str, Enum):
 # Demographics
 # ============================================================================
 
-class Demographics(BaseModel):
+class Demographics(DiminiBaseModel):
     """Structured patient demographics"""
     age: Optional[int] = Field(None, ge=0, le=150, description="Patient age in years")
     gender: Optional[Gender] = Field(None, description="Patient gender identity")
@@ -51,7 +53,7 @@ class Demographics(BaseModel):
 # Base Models
 # ============================================================================
 
-class PatientBase(BaseModel):
+class PatientBase(DiminiBaseModel):
     """Base patient model with common fields"""
     name: str = Field(..., min_length=1, max_length=200, description="Patient full name")
     email: Optional[EmailStr] = Field(None, description="Patient email address")
@@ -79,7 +81,7 @@ class PatientCreate(PatientBase):
         }
 
 
-class PatientUpdate(BaseModel):
+class PatientUpdate(DiminiBaseModel):
     """Model for updating patient information"""
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     email: Optional[EmailStr] = None
@@ -111,7 +113,7 @@ class PatientResponse(PatientBase):
         populate_by_name = True
 
 
-class PatientStats(BaseModel):
+class PatientStats(DiminiBaseModel):
     """Patient statistics"""
     total_sessions: int = Field(..., description="Total number of sessions")
     active_sessions: int = Field(..., description="Number of active/ongoing sessions")
@@ -158,7 +160,7 @@ class PatientDetailResponse(PatientResponse):
         }
 
 
-class PatientListResponse(BaseModel):
+class PatientListResponse(DiminiBaseModel):
     """Response model for patient list with pagination"""
     patients: List[PatientResponse] = Field(..., description="List of patients")
     total: int = Field(..., description="Total number of patients matching query")

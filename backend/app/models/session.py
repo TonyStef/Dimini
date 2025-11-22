@@ -1,18 +1,20 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from enum import Enum
+
+from app.models.base import DiminiBaseModel
 
 class SessionStatus(str, Enum):
     ACTIVE = "ACTIVE"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
-class SessionCreate(BaseModel):
+class SessionCreate(DiminiBaseModel):
     patient_id: str
     therapist_id: Optional[str] = None
 
-class SessionResponse(BaseModel):
+class SessionResponse(DiminiBaseModel):
     id: str
     patient_id: str = Field(alias="patientId")
     therapist_id: str = Field(alias="therapistId")
@@ -28,17 +30,17 @@ class SessionResponse(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-class TranscriptUpdate(BaseModel):
+class TranscriptUpdate(DiminiBaseModel):
     text: str
 
-class SessionSummary(BaseModel):
+class SessionSummary(DiminiBaseModel):
     key_topics: List[str]
     emotional_themes: List[str]
     insights: str
     recommendations: List[str]
     progress_notes: Optional[str] = None
 
-class ProcessingResult(BaseModel):
+class ProcessingResult(DiminiBaseModel):
     nodes_added: List[Dict[str, Any]]
     edges_added: List[Dict[str, Any]]
     status: str

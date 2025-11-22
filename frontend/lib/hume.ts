@@ -33,14 +33,32 @@ export async function getHumeSessionToken(): Promise<string> {
  * Get patient context text for injection
  */
 export async function getPatientContext(patientId: string): Promise<string> {
-  const response = await fetch(`${BACKEND_URL}/api/sessions/patients/${patientId}/context`);
+  try {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  if (!response.ok) {
-    throw new Error(`Context fetch failed: ${response.statusText}`);
+    const response = await fetch(
+      `${BACKEND_URL}/api/sessions/patients/${patientId}/context`,
+      {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Context fetch failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.context_text;
+  } catch (error) {
+    console.error('Failed to fetch patient context', error);
+    // Fall back to empty context so the Hume connection can still proceed.
+    return '';
   }
-
-  const data = await response.json();
-  return data.context_text;
 }
 
 /**

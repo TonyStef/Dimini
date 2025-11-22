@@ -33,6 +33,9 @@ from app.graph.neo4j_client import neo4j_client
 logger = logging.getLogger(__name__)
 
 
+BETWEENNESS_ENABLED = False  # TODO: Re-enable after fixing gds.betweenness.stream query
+
+
 class GraphAlgorithms:
     """Graph algorithms using Neo4j GDS (Graph Data Science)"""
 
@@ -229,7 +232,13 @@ class GraphAlgorithms:
         asyncio.create_task(self.pagerank_background_task(session_id, interval=10))
 
         # Tier 3: Betweenness (every 60s)
-        asyncio.create_task(self.betweenness_background_task(session_id, interval=60))
+        if BETWEENNESS_ENABLED:
+            asyncio.create_task(self.betweenness_background_task(session_id, interval=60))
+        else:
+            logger.info(
+                "Betweenness task disabled for session %s (see TODO in graph/algorithms.py)",
+                session_id
+            )
 
         logger.info(f"Background algorithms started for session {session_id}")
 

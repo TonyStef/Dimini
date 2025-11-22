@@ -1,4 +1,4 @@
-from together import Together
+from openai import OpenAI
 import numpy as np
 import logging
 import time
@@ -8,22 +8,22 @@ from app.models.graph import GraphNodeResponse
 
 logger = logging.getLogger(__name__)
 
-# Together AI client
-client = Together(api_key=settings.TOGETHER_API_KEY)
+# OpenAI client for embeddings
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 class SemanticLinker:
     """Calculate semantic similarity between entities using embeddings"""
     
     def __init__(self, threshold: float = None):
         self.threshold = threshold or settings.SIMILARITY_THRESHOLD
-        # Together AI embedding model
-        self.embedding_model = "togethercomputer/m2-bert-80M-8k-retrieval"
+        # OpenAI embedding model (reliable, no 503 errors)
+        self.embedding_model = "text-embedding-3-small"
         self.max_retries = 3
         self.base_delay = 1.0  # Start with 1 second delay
 
     async def get_embedding(self, text: str) -> Optional[List[float]]:
         """
-        Generate Together AI embedding with retry logic for rate limiting.
+        Generate OpenAI embedding with retry logic for rate limiting.
 
         Args:
             text: The entity label or description
@@ -39,6 +39,7 @@ class SemanticLinker:
                 )
 
                 embedding = response.data[0].embedding
+                logger.info(f"✅ Generated embedding for: {text}")
                 return embedding
 
             except Exception as e:
@@ -80,6 +81,7 @@ class SemanticLinker:
                 for i, text in enumerate(texts):
                     embeddings[text] = response.data[i].embedding
 
+                logger.info(f"✅ Generated {len(embeddings)} embeddings in batch")
                 return embeddings
 
             except Exception as e:

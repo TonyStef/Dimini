@@ -69,6 +69,9 @@ export default function SemanticGraph({
     }
   }, [graphData.nodes.length]);
 
+  // REMOVED d3-force configuration due to Docker/dependency issues
+  // Graph will use react-force-graph's built-in physics simulation
+
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-slate-950">
@@ -121,9 +124,8 @@ export default function SemanticGraph({
         linkSource="source"
         linkTarget="target"
 
-        // HIERARCHICAL LAYOUT: Guaranteed node separation (radial pattern)
-        dagMode="radialout"
-        dagLevelDistance={150}
+        // NO DAG MODE: Pure physics for instant real-time rendering + dynamic node additions
+        // (dag modes don't work well for real-time sessions with incremental nodes)
 
         nodeLabel={(node: any) => `${node.label} (${highlightMetric}: ${
           highlightMetric === 'weighted_degree' ? node.weightedDegree?.toFixed(2) :
@@ -139,19 +141,14 @@ export default function SemanticGraph({
         backgroundColor="#020617"
         linkColor={() => '#94a3b8'}  // Brighter slate for better visibility
 
-        // Physics simulation (optimized for small graphs)
-        d3AlphaDecay={0.01}  // SLOWER decay - let forces work longer
+        // Physics simulation (let forces work to separate nodes)
+        d3AlphaDecay={0.01}  // Slower decay - let forces work longer
         d3VelocityDecay={0.4}
-        warmupTicks={300}  // INCREASED for better initial separation
+        warmupTicks={100}  // Run 100 iterations before rendering (forces need time!)
         cooldownTime={5000}
 
-        // FIXED Force parameters
-        d3ForceCharge={() => -800}  // Strong repulsion force for separation
-        d3ForceLink={(link) => (link.value || 0.75) * 50}  // FIXED: Now properly proportional (was backwards!)
-        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.1 })}  // Weak centering
-
-        // Collision detection to prevent node overlap
-        d3ForceCollide={(node: any) => getNodeSize(node) + 20}  // Node size + 20px padding
+        // NOTE: Force configuration is done via d3Force() method in useEffect
+        // (d3ForceCharge, d3ForceLink, etc. props don't exist in the API)
 
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {

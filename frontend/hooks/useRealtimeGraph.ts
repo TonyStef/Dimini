@@ -107,11 +107,34 @@ export function useRealtimeGraph(sessionId: string | null) {
         currentEdges: graphData.links.length
       });
 
-      // Single state update (triggers ONE re-render instead of 50+)
-      setGraphData(prev => ({
-        nodes: [...prev.nodes, ...newNodes],
-        links: [...prev.links, ...newEdges]
-      }));
+      // Single state update with duplicate prevention
+      setGraphData(prev => {
+        // Create set of existing node IDs for quick lookup
+        const existingIds = new Set(prev.nodes.map(n => n.id));
+
+        // Only add nodes that don't already exist (prevent duplicates)
+        const nodesToAdd = newNodes.filter(n => !existingIds.has(n.id));
+
+        // Same for edges
+        const existingEdgeKeys = new Set(
+          prev.links.map(e => `${e.source}-${e.target}`)
+        );
+        const edgesToAdd = newEdges.filter(
+          e => !existingEdgeKeys.has(`${e.source}-${e.target}`)
+        );
+
+        console.log('[useRealtimeGraph] After deduplication:', {
+          nodesToAdd: nodesToAdd.length,
+          edgesToAdd: edgesToAdd.length,
+          skippedDuplicateNodes: newNodes.length - nodesToAdd.length,
+          skippedDuplicateEdges: newEdges.length - edgesToAdd.length
+        });
+
+        return {
+          nodes: [...prev.nodes, ...nodesToAdd],
+          links: [...prev.links, ...edgesToAdd]
+        };
+      });
     });
 
     // Listen for metrics updates (Tier 2 & 3)

@@ -72,11 +72,35 @@ async def hume_tool_call(request: Request):
             logger.error(f"No handler found for tool: {tool_name}")
             raise HTTPException(status_code=404, detail=f"Tool not found: {tool_name}")
 
-        # Execute tool handler
-        # TODO Phase 4: Extract session_id from chat_id or custom_session_id
-        # For now, use chat_id as session_id
-        session_id = chat_id or "default_session"
+        # Map Hume chat_id to PostgreSQL session_id
+        from app.database import db
 
+        # Try to find session by humeChatId
+        session = await db.session.find_first(
+            where={"humeChatId": chat_id}
+        )
+
+        if not session:
+            # Fallback: If no humeChatId mapping, try to find latest ACTIVE session
+            # This handles the case where chat_started hasn't linked yet
+            session = await db.session.find_first(
+                where={"status": "ACTIVE"},
+                order={"startedAt": "desc"}
+            )
+
+            if session:
+                # Save humeChatId for future tool calls
+                await db.session.update(
+                    where={"id": session.id},
+                    data={"humeChatId": chat_id}
+                )
+                logger.info(f"Linked chat_id {chat_id} to session {session.id}")
+
+        if not session:
+            logger.error(f"No session found for chat_id: {chat_id}")
+            raise HTTPException(status_code=404, detail="Session not found for this chat")
+
+        session_id = session.id
         logger.info(f"Executing tool '{tool_name}' for session {session_id}")
         result = await handler(session_id=session_id, params=parameters)
 
@@ -101,19 +125,34 @@ async def hume_chat_started(request: Request):
     Handle Hume AI chat_started webhook.
 
     Called when a new chat session begins.
+    Saves Hume chat_id to session for future tool call mapping.
     """
+    from app.database import db
+
     try:
         payload = await request.json()
         chat_id = payload.get("chat_id")
-        logger.info(f"Chat started: {chat_id}")
+        custom_session_id = payload.get("custom_session_id")  # May be None if not supported
 
-        # TODO Phase 4: Initialize session in database
-        # TODO Phase 5: Broadcast session start to frontend via WebSocket
+        logger.info(f"Chat started: chat_id={chat_id}, custom_session_id={custom_session_id}")
 
-        return {"status": "success", "message": "Chat session initialized"}
+        if custom_session_id:
+            # OPTION 1: Hume supports custom_session_id
+            # Update existing session with humeChatId
+            session = await db.session.update(
+                where={"id": custom_session_id},
+                data={"humeChatId": chat_id}
+            )
+            logger.info(f"Saved humeChatId {chat_id} for session {session.id}")
+        else:
+            # OPTION 2: No custom_session_id - cannot link to session yet
+            # Session will be linked when tool_call arrives (by querying latest active session)
+            logger.warning(f"No custom_session_id provided - humeChatId mapping deferred")
+
+        return {"status": "success", "message": "Chat session initialized", "chat_id": chat_id}
 
     except Exception as e:
-        logger.error(f"Error handling chat_started webhook: {e}")
+        logger.error(f"Error handling chat_started webhook: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -7,9 +7,14 @@ Each handler corresponds to a tool defined in Hume AI configuration.
 
 from typing import Dict
 import logging
+import asyncio
 from .session_service import SessionService
+from .tool_kg_integration import ToolKGIntegration
 
 logger = logging.getLogger(__name__)
+
+# Initialize KG integration service
+kg_integration = ToolKGIntegration()
 
 
 async def execute_save_note(session_id: str, params: Dict) -> Dict:
@@ -32,12 +37,22 @@ async def execute_save_note(session_id: str, params: Dict) -> Dict:
     try:
         logger.info(f"Executing save_note for session {session_id}")
 
+        # [1] Save to PostgreSQL
         note = await SessionService.add_note(
             session_id=session_id,
             note=params["note"],
             category=params["category"],
             importance=params.get("importance", "medium"),
             source="ai_agent"
+        )
+
+        # [2] Process for KG (async, non-blocking)
+        asyncio.create_task(
+            kg_integration.process_note_for_kg(
+                session_id=session_id,
+                note_content=params["note"],
+                category=params["category"]
+            )
         )
 
         return {
@@ -81,12 +96,21 @@ async def execute_mark_progress(session_id: str, params: Dict) -> Dict:
     try:
         logger.info(f"Executing mark_progress for session {session_id}: {params['progress_type']}")
 
-        # Write to PostgreSQL only (KG deferred to Phase 4)
+        # [1] Save to PostgreSQL
         progress = await SessionService.mark_progress(
             session_id=session_id,
             progress_type=params["progress_type"],
             description=params["description"],
             evidence=params.get("evidence")
+        )
+
+        # [2] Process for KG (async, non-blocking)
+        asyncio.create_task(
+            kg_integration.process_progress_for_kg(
+                session_id=session_id,
+                progress_type=params["progress_type"],
+                description=params["description"]
+            )
         )
 
         return {
@@ -131,12 +155,23 @@ async def execute_flag_concern(session_id: str, params: Dict) -> Dict:
     try:
         logger.info(f"Executing flag_concern for session {session_id}: {params['concern_type']} ({params['severity']})")
 
+        # [1] Save to PostgreSQL
         concern = await SessionService.flag_concern(
             session_id=session_id,
             concern_type=params["concern_type"],
             severity=params["severity"],
             description=params["description"],
             recommended_action=params.get("recommended_action")
+        )
+
+        # [2] Process for KG (async, non-blocking)
+        asyncio.create_task(
+            kg_integration.process_concern_for_kg(
+                session_id=session_id,
+                concern_type=params["concern_type"],
+                severity=params["severity"],
+                description=params["description"]
+            )
         )
 
         # TODO Phase 5: Send urgent alert via WebSocket if severity is high/urgent

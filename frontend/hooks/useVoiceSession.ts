@@ -146,12 +146,9 @@ export const useVoiceSession = (
         case 'error':
           // Filter empty/benign error messages from Hume handshake
           const errorMsg = message?.message || message?.error || null;
-          const messageKeys = Object.keys(message);
 
-          console.log('[DEBUG] Error message keys:', messageKeys, 'errorMsg:', errorMsg);
-
-          if (!errorMsg && messageKeys.length <= 1) {
-            // Empty error (only has 'type' field) - benign handshake message
+          // Ignore if no actual error content, regardless of empty fields
+          if (!errorMsg) {
             console.log('[Hume] Received empty error message (handshake), ignoring');
             break;
           }

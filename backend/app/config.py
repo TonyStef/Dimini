@@ -12,10 +12,7 @@ class Settings(BaseSettings):
     NEO4J_USER: str
     NEO4J_PASSWORD: str
 
-    # Together AI
-    TOGETHER_API_KEY: str
-
-    # Keep for backward compatibility / embeddings fallback
+    # OpenAI API
     OPENAI_API_KEY: str = ""
     
     # Server

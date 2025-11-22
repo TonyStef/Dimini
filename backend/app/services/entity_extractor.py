@@ -1,4 +1,4 @@
-from together import Together
+from openai import OpenAI
 import json
 import logging
 from typing import Dict, List
@@ -7,8 +7,10 @@ from app.models.graph import ExtractedEntity, EntityExtractionResult, NodeType
 
 logger = logging.getLogger(__name__)
 
-# Initialize Together AI client
-client = Together(api_key=settings.TOGETHER_API_KEY)
+# Initialize OpenAI client (optional)
+client = None
+if settings.OPENAI_API_KEY:
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 class EntityExtractor:
     """Extract topics and emotions from therapy transcripts using GPT-4"""
@@ -53,12 +55,17 @@ Do not include any other text, explanations, or markdown formatting. Just the ra
         """
         if not transcript_chunk or not transcript_chunk.strip():
             return EntityExtractionResult(entities=[])
-            
+
+        # Skip if OpenAI not configured
+        if client is None:
+            logger.warning("OpenAI API key not configured, skipping entity extraction")
+            return EntityExtractionResult(entities=[])
+
         try:
             logger.info(f"Extracting entities from chunk: {transcript_chunk[:100]}...")
 
             response = client.chat.completions.create(
-                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                model=settings.GPT_MODEL,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"Extract entities from this therapy conversation:\n\n{transcript_chunk}"}
@@ -68,7 +75,7 @@ Do not include any other text, explanations, or markdown formatting. Just the ra
             )
 
             # Parse JSON response
-            logger.info(f"Together AI Response: {response}")
+            logger.info(f"OpenAI Response: {response}")
             content = response.choices[0].message.content
             if not content:
                 logger.warning(f"No content in response. Full response: {response}")

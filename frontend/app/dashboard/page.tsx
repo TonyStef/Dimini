@@ -144,18 +144,22 @@ export default function DashboardPage() {
             </Link>
 
             {/* Sessions Card */}
-            <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-not-allowed">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-lg bg-accent-warm/10">
-                  <Activity className="w-6 h-6 text-accent-warm" />
+            <Link href="/sessions">
+              <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-pointer">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-lg bg-accent-warm/10">
+                    <Activity className="w-6 h-6 text-accent-warm" />
+                  </div>
+                  <h4 className="font-semibold text-text-primary">Sessions</h4>
                 </div>
-                <h4 className="font-semibold text-text-primary">Sessions</h4>
-              </div>
-              <p className="text-sm text-text-secondary mb-4">
-                Start new sessions and view real-time semantic graphs
-              </p>
-              <p className="text-xs text-accent-warm">Coming soon</p>
-            </Card>
+                <p className="text-sm text-text-secondary mb-4">
+                  Start new sessions and view real-time semantic graphs
+                </p>
+                <Button size="sm" className="w-full">
+                  Start Session
+                </Button>
+              </Card>
+            </Link>
 
             {/* Settings Card */}
             <Card className="bg-surface-elevated border-border p-6 hover:bg-surface-overlay transition-all hover:shadow-glow cursor-not-allowed">

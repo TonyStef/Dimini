@@ -1,22 +1,27 @@
 'use client';
 
-import { useEffect } from 'react';
+/**
+ * Live Session Page with Real-time Knowledge Graph
+ *
+ * Features:
+ * - Real-time semantic graph visualization
+ * - Multi-tier insights (Weighted Degree, PageRank, Betweenness)
+ * - WebSocket integration for live updates
+ * - Session controls (end session)
+ */
+
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useRealtimeGraph } from '@/hooks/useRealtimeGraph';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  ArrowLeft,
-  Mic,
-  Circle,
-  AlertCircle,
-} from 'lucide-react';
+import SemanticGraph from '@/components/SemanticGraph';
+import { ArrowLeft, Circle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
-// ============================================================================
-// Main Component
-// ============================================================================
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export default function SessionViewPage() {
   const router = useRouter();
@@ -25,10 +30,8 @@ export default function SessionViewPage() {
   const sessionId = params.sessionId as string;
 
   const { user, loading: authLoading } = useAuth();
-
-  // ========================================
-  // Auth Check
-  // ========================================
+  const { graphData, loading: graphLoading } = useRealtimeGraph(sessionId);
+  const [sessionStatus, setSessionStatus] = useState<'active' | 'completed'>('active');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -36,31 +39,32 @@ export default function SessionViewPage() {
     }
   }, [user, authLoading, router]);
 
-  // ========================================
-  // Loading State
-  // ========================================
+  const endSession = async () => {
+    try {
+      await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/end`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      setSessionStatus('completed');
+    } catch (error) {
+      console.error('Failed to end session:', error);
+    }
+  };
 
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl text-muted-foreground">Loading...</div>
-        </div>
+        <div className="text-xl text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
-  // ========================================
-  // Render
-  // ========================================
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b bg-surface">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Back Button and Title */}
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
                 <Link href={`/patients/${patientId}`}>
@@ -69,77 +73,90 @@ export default function SessionViewPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">Live Session</h1>
-                <p className="text-sm text-muted-foreground">Session ID: {sessionId}</p>
+                <p className="text-sm text-muted-foreground">Session ID: {sessionId.slice(0, 8)}...</p>
               </div>
             </div>
 
-            {/* Status Badge */}
-            <Badge variant="default" className="bg-green-500 hover:bg-green-600 flex items-center gap-2">
-              <Circle className="h-2 w-2 fill-current animate-pulse" />
-              Active Session
-            </Badge>
+            <div className="flex items-center gap-4">
+              <Badge
+                variant="default"
+                className={sessionStatus === 'active'
+                  ? 'bg-green-500 hover:bg-green-600 flex items-center gap-2'
+                  : 'bg-gray-500 flex items-center gap-2'
+                }
+              >
+                {sessionStatus === 'active' ? (
+                  <>
+                    <Circle className="h-2 w-2 fill-current animate-pulse" />
+                    Live
+                  </>
+                ) : (
+                  'Completed'
+                )}
+              </Badge>
+
+              <Button
+                variant="destructive"
+                onClick={endSession}
+                disabled={sessionStatus === 'completed'}
+                size="sm"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                End Session
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-12">
-        <div className="max-w-2xl mx-auto">
-          {/* Placeholder Card */}
-          <Card className="border-2 border-dashed">
-            <CardContent className="py-16 text-center">
-              <div className="inline-block p-6 bg-surface-elevated rounded-full mb-6">
-                <Mic className="h-16 w-16 text-primary" />
-              </div>
+      {/* Main Content: Graph Visualization */}
+      <div className="flex-1 container mx-auto px-6 py-6">
+        <div className="h-full grid grid-cols-3 gap-6">
+          {/* Graph (2/3 width) */}
+          <Card className="col-span-2 p-0 overflow-hidden h-[calc(100vh-200px)]">
+            <SemanticGraph
+              graphData={graphData}
+              loading={graphLoading}
+              highlightMetric="pagerank"
+            />
+          </Card>
 
-              <h2 className="text-3xl font-bold mb-4">Voice AI Integration</h2>
-
-              <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
-                This page will display the real-time semantic graph during therapy sessions.
-                Voice AI integration is in progress.
-              </p>
-
-              {/* Info Alert */}
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-6 text-left max-w-lg mx-auto mb-8">
-                <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-blue-500 mb-2">Coming Soon</h3>
-                    <p className="text-sm text-muted-foreground">
-                      The live session view will include:
-                    </p>
-                    <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                      <li>Real-time semantic relationship graph</li>
-                      <li>Voice AI transcript streaming</li>
-                      <li>Topic and emotion detection</li>
-                      <li>Session controls and timer</li>
-                    </ul>
-                  </div>
+          {/* Stats Sidebar (1/3 width) */}
+          <div className="space-y-4">
+            <Card className="p-4">
+              <h3 className="text-sm font-semibold mb-2">Graph Stats</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nodes:</span>
+                  <span className="font-medium">{graphData.nodes.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Connections:</span>
+                  <span className="font-medium">{graphData.links.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Topics:</span>
+                  <span className="font-medium text-blue-500">
+                    {graphData.nodes.filter(n => n.type === 'topic').length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Emotions:</span>
+                  <span className="font-medium text-red-500">
+                    {graphData.nodes.filter(n => n.type === 'emotion').length}
+                  </span>
                 </div>
               </div>
+            </Card>
 
-              {/* Actions */}
-              <div className="flex gap-3 justify-center">
-                <Button variant="outline" asChild>
-                  <Link href={`/patients/${patientId}`}>
-                    Back to Patient
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/patients">
-                    All Patients
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Technical Details */}
-              <div className="mt-12 pt-8 border-t">
-                <p className="text-xs text-muted-foreground">
-                  Session Page: /patients/{patientId}/sessions/{sessionId}
+            {graphData.nodes.length === 0 && (
+              <Card className="p-4 bg-blue-500/10 border-blue-500/20">
+                <p className="text-sm text-muted-foreground">
+                  Waiting for entities to appear in the conversation...
                 </p>
-              </div>
-            </CardContent>
-          </Card>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

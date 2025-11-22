@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from typing import List, Optional
 from datetime import datetime
 import logging
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database import db
 from app.models.session import (
-    SessionCreate, SessionResponse, TranscriptUpdate, 
+    SessionCreate, SessionResponse, TranscriptUpdate,
     ProcessingResult, SessionSummary
 )
 from app.models.graph import FrontendGraphData
@@ -14,10 +16,14 @@ from app.api.auth import get_current_user
 from app.services.graph_builder import GraphBuilder, get_session_graph_data
 from app.services.session_analyzer import SessionAnalyzer
 from app.services.realtime import RealtimeService
+from app.voice_agent.services.patient_service import PatientService
+from app.graph.algorithms import graph_algorithms
+from app.graph.neo4j_client import neo4j_client
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 # Initialize services (in production, use dependency injection)
 graph_builder = None
@@ -112,15 +118,19 @@ async def start_session(
             "status": "ACTIVE"
         }
     )
-    
+
     logger.info(f"Started session {session.id} for patient {patient.id}")
-    
+
+    # Start background graph algorithms (Tier 2 & 3)
+    graph_algorithms.start_background_algorithms(session.id)
+    logger.info(f"Started background algorithms for session {session.id}")
+
     # Notify via websocket
     if get_graph_builder().realtime_service:
         await get_graph_builder().realtime_service.broadcast_session_status(
             session.id, "ACTIVE"
         )
-    
+
     return SessionResponse.model_validate(session)
 
 @router.post("/{session_id}/transcript", response_model=ProcessingResult)
@@ -200,6 +210,10 @@ async def end_session(
             detail="Session is not active"
         )
     
+    # Stop background graph algorithms
+    graph_algorithms.stop_background_algorithms(session_id)
+    logger.info(f"Stopped background algorithms for session {session_id}")
+
     # Update session status
     updated_session = await db.session.update(
         where={"id": session_id},
@@ -208,21 +222,21 @@ async def end_session(
             "endedAt": datetime.utcnow()
         }
     )
-    
+
     logger.info(f"Ended session {session_id}")
-    
+
     # Generate summary in background
     background_tasks.add_task(
         generate_session_summary_task,
         session_id
     )
-    
+
     # Notify via websocket
     if get_graph_builder().realtime_service:
         await get_graph_builder().realtime_service.broadcast_session_status(
             session_id, "COMPLETED"
         )
-    
+
     return SessionResponse.model_validate(updated_session)
 
 @router.get("/{session_id}", response_model=SessionResponse)
@@ -271,11 +285,22 @@ async def get_session_graph(
     return graph_data
 
 @router.get("/{session_id}/insights")
+@limiter.limit("30/minute")
 async def get_session_insights(
+    request: Request,
     session_id: str,
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Get quick insights about a session"""
+    """
+    Get multi-tier graph insights for a session.
+
+    Returns:
+    - real_time: Weighted degree (instant, <5ms old)
+    - core_issues: PageRank (accurate, ~10s old)
+    - emotional_triggers: Betweenness (deep, ~60s old)
+
+    Rate limit: 30 requests per minute per IP
+    """
     # Verify session exists and belongs to therapist
     session = await db.session.find_first(
         where={
@@ -283,15 +308,94 @@ async def get_session_insights(
             "therapistId": current_user.id
         }
     )
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
-    insights = await session_analyzer.get_session_insights(session_id)
-    return insights
+
+    try:
+        # Get all entities with metrics from Neo4j
+        entities = neo4j_client.get_session_entities(session_id)
+
+        # Sort by different metrics
+        by_weighted_degree = sorted(
+            entities,
+            key=lambda e: e.get('weighted_degree', 0),
+            reverse=True
+        )[:10]
+
+        by_pagerank = sorted(
+            entities,
+            key=lambda e: e.get('pagerank', 0),
+            reverse=True
+        )[:10]
+
+        by_betweenness = sorted(
+            entities,
+            key=lambda e: e.get('betweenness', 0),
+            reverse=True
+        )[:5]
+
+        # Get metrics freshness
+        freshness_query = """
+        MATCH (e:Entity {session_id: $session_id})
+        RETURN max(e.metrics_updated_at) AS last_updated
+        """
+        freshness_result = neo4j_client.execute_query(
+            freshness_query,
+            {"session_id": session_id}
+        )
+
+        last_updated = freshness_result[0]['last_updated'] if freshness_result else None
+
+        return {
+            "real_time": {
+                "description": "Instant mention frequency + connectivity",
+                "top_entities": [
+                    {
+                        "label": e['label'],
+                        "type": e['node_type'],
+                        "weighted_degree": e.get('weighted_degree', 0),
+                        "mention_count": e.get('mention_count', 0)
+                    }
+                    for e in by_weighted_degree
+                ],
+                "latency": "instant (<5ms)"
+            },
+            "core_issues": {
+                "description": "Most important topics via graph structure",
+                "top_entities": [
+                    {
+                        "label": e['label'],
+                        "type": e['node_type'],
+                        "pagerank": e.get('pagerank', 0),
+                        "mention_count": e.get('mention_count', 0)
+                    }
+                    for e in by_pagerank
+                ],
+                "last_updated": str(last_updated),
+                "update_frequency": "every 10s"
+            },
+            "emotional_triggers": {
+                "description": "Topics bridging multiple emotions",
+                "top_entities": [
+                    {
+                        "label": e['label'],
+                        "type": e['node_type'],
+                        "betweenness": e.get('betweenness', 0)
+                    }
+                    for e in by_betweenness
+                ],
+                "last_updated": str(last_updated),
+                "update_frequency": "every 60s"
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting insights for session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{session_id}/cancel", response_model=SessionResponse)
 async def cancel_session(
@@ -318,7 +422,11 @@ async def cancel_session(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only active sessions can be cancelled"
         )
-    
+
+    # Stop background graph algorithms
+    graph_algorithms.stop_background_algorithms(session_id)
+    logger.info(f"Stopped background algorithms for cancelled session {session_id}")
+
     # Update session status
     updated_session = await db.session.update(
         where={"id": session_id},
@@ -327,16 +435,60 @@ async def cancel_session(
             "endedAt": datetime.utcnow()
         }
     )
-    
+
     logger.info(f"Cancelled session {session_id}")
-    
+
     # Notify via websocket
     if get_graph_builder().realtime_service:
         await get_graph_builder().realtime_service.broadcast_session_status(
             session_id, "CANCELLED"
         )
-    
+
     return SessionResponse.model_validate(updated_session)
+
+@router.get("/patients/{patient_id}/context")
+async def get_patient_context(
+    patient_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Get formatted patient context text for Hume AI injection.
+    Frontend sends this directly to Hume as initial context.
+
+    Returns:
+        {
+            "context_text": "...",
+            "patient_name": "..."
+        }
+    """
+    # Verify patient belongs to therapist
+    patient = await db.patient.find_first(
+        where={
+            "id": patient_id,
+            "therapistId": current_user.id
+        }
+    )
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found"
+        )
+
+    try:
+        patient_service = PatientService()
+        patient_history = await patient_service.fetch_patient_history(patient_id)
+        context_text = patient_service.format_history_for_context(patient_history)
+
+        logger.info(f"Generated context for patient {patient_id}, length: {len(context_text)}")
+
+        return {
+            "context_text": context_text,
+            "patient_name": patient_history.get("name", "Unknown")
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate patient context: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate context: {str(e)}")
 
 # Background task for summary generation
 async def generate_session_summary_task(session_id: str):

@@ -1,74 +1,100 @@
-import openai
+from together import Together
 import numpy as np
 import logging
+import time
 from typing import List, Tuple, Dict, Optional
 from app.config import settings
 from app.models.graph import GraphNodeResponse
 
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+# Together AI client
+client = Together(api_key=settings.TOGETHER_API_KEY)
 
 class SemanticLinker:
     """Calculate semantic similarity between entities using embeddings"""
     
     def __init__(self, threshold: float = None):
         self.threshold = threshold or settings.SIMILARITY_THRESHOLD
-        self.embedding_model = settings.EMBEDDING_MODEL
-        
+        # Together AI embedding model
+        self.embedding_model = "togethercomputer/m2-bert-80M-8k-retrieval"
+        self.max_retries = 3
+        self.base_delay = 1.0  # Start with 1 second delay
+
     async def get_embedding(self, text: str) -> Optional[List[float]]:
         """
-        Generate OpenAI embedding for a text string.
-        
+        Generate Together AI embedding with retry logic for rate limiting.
+
         Args:
             text: The entity label or description
-            
+
         Returns:
-            List of floats (1536 dimensions for text-embedding-3-small)
+            List of floats (embedding dimensions)
         """
-        try:
-            response = client.embeddings.create(
-                model=self.embedding_model,
-                input=text
-            )
-            
-            embedding = response.data[0].embedding
-            return embedding
-            
-        except Exception as e:
-            logger.error(f"Error generating embedding for '{text}': {e}")
-            return None
+        for attempt in range(self.max_retries):
+            try:
+                response = client.embeddings.create(
+                    model=self.embedding_model,
+                    input=text
+                )
+
+                embedding = response.data[0].embedding
+                return embedding
+
+            except Exception as e:
+                error_msg = str(e)
+                if "503" in error_msg or "overloaded" in error_msg.lower():
+                    if attempt < self.max_retries - 1:
+                        delay = self.base_delay * (2 ** attempt)  # Exponential backoff
+                        logger.warning(f"Rate limited, retrying in {delay}s (attempt {attempt + 1}/{self.max_retries})")
+                        time.sleep(delay)
+                        continue
+                logger.error(f"Error generating embedding for '{text}': {e}")
+                return None
+
+        logger.error(f"Failed to generate embedding for '{text}' after {self.max_retries} attempts")
+        return None
             
     async def get_embeddings_batch(self, texts: List[str]) -> Dict[str, List[float]]:
         """
-        Generate embeddings for multiple texts in a single API call.
-        
+        Generate embeddings for multiple texts with retry logic.
+
         Args:
             texts: List of text strings
-            
+
         Returns:
             Dictionary mapping text to embedding
         """
         if not texts:
             return {}
-            
-        try:
-            response = client.embeddings.create(
-                model=self.embedding_model,
-                input=texts
-            )
-            
-            # Map texts to their embeddings
-            embeddings = {}
-            for i, text in enumerate(texts):
-                embeddings[text] = response.data[i].embedding
-                
-            return embeddings
-            
-        except Exception as e:
-            logger.error(f"Error generating batch embeddings: {e}")
-            return {}
+
+        for attempt in range(self.max_retries):
+            try:
+                response = client.embeddings.create(
+                    model=self.embedding_model,
+                    input=texts
+                )
+
+                # Map texts to their embeddings
+                embeddings = {}
+                for i, text in enumerate(texts):
+                    embeddings[text] = response.data[i].embedding
+
+                return embeddings
+
+            except Exception as e:
+                error_msg = str(e)
+                if "503" in error_msg or "overloaded" in error_msg.lower():
+                    if attempt < self.max_retries - 1:
+                        delay = self.base_delay * (2 ** attempt)
+                        logger.warning(f"Rate limited on batch, retrying in {delay}s (attempt {attempt + 1}/{self.max_retries})")
+                        time.sleep(delay)
+                        continue
+                logger.error(f"Error generating batch embeddings: {e}")
+                return {}
+
+        logger.error(f"Failed to generate batch embeddings after {self.max_retries} attempts")
+        return {}
             
     def cosine_similarity(self, embedding_a: List[float], embedding_b: List[float]) -> float:
         """

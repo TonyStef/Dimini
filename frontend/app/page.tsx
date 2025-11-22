@@ -559,7 +559,7 @@ export default function HomePage() {
               <div className="space-y-4">
                 <h4 className="font-display font-semibold">Company</h4>
                 <ul className="space-y-2 text-sm text-text-secondary">
-                  <li><a href="#" className="hover:text-text-primary transition-colors">About</a></li>
+                  <li><Link href="/about" className="hover:text-text-primary transition-colors">About</Link></li>
                   <li><a href="#" className="hover:text-text-primary transition-colors">Blog</a></li>
                   <li><a href="#" className="hover:text-text-primary transition-colors">Careers</a></li>
                   <li><a href="#" className="hover:text-text-primary transition-colors">Contact</a></li>
@@ -570,9 +570,9 @@ export default function HomePage() {
               <div className="space-y-4">
                 <h4 className="font-display font-semibold">Legal</h4>
                 <ul className="space-y-2 text-sm text-text-secondary">
-                  <li><a href="#" className="hover:text-text-primary transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="hover:text-text-primary transition-colors">Terms of Service</a></li>
-                  <li><a href="#" className="hover:text-text-primary transition-colors">HIPAA Compliance</a></li>
+                  <li><Link href="/privacy-policy" className="hover:text-text-primary transition-colors">Privacy Policy</Link></li>
+                  <li><Link href="/terms-of-service" className="hover:text-text-primary transition-colors">Terms of Service</Link></li>
+                  <li><Link href="/hipaa-compliance" className="hover:text-text-primary transition-colors">HIPAA Compliance</Link></li>
                 </ul>
               </div>
             </div>

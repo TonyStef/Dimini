@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from enum import Enum
@@ -14,18 +14,19 @@ class SessionCreate(BaseModel):
 
 class SessionResponse(BaseModel):
     id: str
-    patient_id: str
-    therapist_id: str
-    started_at: datetime
-    ended_at: Optional[datetime] = None
+    patient_id: str = Field(alias="patientId")
+    therapist_id: str = Field(alias="therapistId")
+    started_at: datetime = Field(alias="startedAt")
+    ended_at: Optional[datetime] = Field(default=None, alias="endedAt")
     status: SessionStatus
-    transcript: str
+    transcript: str = Field(default="")
     summary: Optional[Dict[str, Any]] = None
-    created_at: datetime
-    updated_at: datetime
-    
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class TranscriptUpdate(BaseModel):
     text: str

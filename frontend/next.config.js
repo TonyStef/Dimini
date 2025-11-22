@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone', // Required for Docker production builds
   reactStrictMode: true,
   images: {
     formats: ['image/avif', 'image/webp'],

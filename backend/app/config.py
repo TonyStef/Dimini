@@ -45,7 +45,7 @@ class Settings(BaseSettings):
         return v
 
     # Semantic Similarity
-    SIMILARITY_THRESHOLD: float = 0.75
+    SIMILARITY_THRESHOLD: float = 0.50  # Lowered from 0.75 to allow more connections
     
     # Entity Extraction
     EXTRACTION_INTERVAL: int = 30  # seconds

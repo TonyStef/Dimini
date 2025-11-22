@@ -85,16 +85,9 @@ class GraphBuilder:
             entity_labels = [entity.label for entity in entities]
             embeddings_batch = await self.linker.get_embeddings_batch(entity_labels)
 
-            # Step 3B: Process each new entity with pre-generated embeddings
+            # Step 3B: Create ALL nodes first (no edge creation yet)
+            new_nodes_data = []
             for entity in entities:
-                # Check if node already exists (Neo4j MERGE will handle deduplication)
-                existing = neo4j_client.get_entity_by_id(session_id, entity.node_id)
-
-                if existing:
-                    logger.info(f"Entity already exists, mention_count incremented: {entity.node_id}")
-                    # Neo4j MERGE will handle mention_count increment
-                    # Still need to process for edges
-
                 # Get embedding from batch results
                 embedding = embeddings_batch.get(entity.label)
 
@@ -122,41 +115,45 @@ class GraphBuilder:
                     'betweenness': 0.0
                 })
 
-                # Step 4: Find related nodes (semantic similarity)
-                if self.realtime_service:
-                    await self.realtime_service.broadcast_processing_status(
-                        session_id, "linking", f"Finding connections for '{entity.label}'..."
-                    )
+                # Collect new node data for similarity calculation
+                new_nodes_data.append({
+                    "node_id": entity.node_id,
+                    "embedding": embedding
+                })
 
-                node_data = {"node_id": entity.node_id, "embedding": embedding}
-                related_nodes = await self.linker.find_related_nodes(
-                    node_data,
-                    existing_node_data
+            # Step 4: Calculate ALL similarities (new nodes + existing nodes)
+            if self.realtime_service:
+                await self.realtime_service.broadcast_processing_status(
+                    session_id, "linking", "Calculating semantic connections..."
                 )
 
-                # Step 5: Create edges in Neo4j
-                for related_node_id, similarity_score in related_nodes:
-                    # Create edge (Neo4j MERGE handles deduplication)
-                    edge = neo4j_client.create_similarity_edge(
-                        session_id=session_id,
-                        source_id=entity.node_id,
-                        target_id=related_node_id,
-                        similarity_score=similarity_score
-                    )
+            # Combine new and existing nodes for all-pairs comparison
+            all_nodes = existing_node_data + new_nodes_data
+            logger.info(f"[EDGE-DEBUG] Calculating similarities for {len(all_nodes)} total nodes ({len(new_nodes_data)} new, {len(existing_node_data)} existing)")
 
-                    edges_added.append({
-                        'source': entity.node_id,
-                        'target': related_node_id,
-                        'similarity': similarity_score
-                    })
+            # Use calculate_all_similarities() for ALL pairs
+            similarities = await self.linker.calculate_all_similarities(all_nodes)
+            logger.info(f"[EDGE-DEBUG] Found {len(similarities)} edges above threshold {self.linker.threshold}")
 
-                    # Step 6: Update Tier 1 metrics (weighted degree) for BOTH nodes
-                    # This is INSTANT (<5ms per node)
-                    neo4j_client.update_weighted_degree(session_id, entity.node_id)
-                    neo4j_client.update_weighted_degree(session_id, related_node_id)
+            # Step 5: Create edges in Neo4j for all similarities
+            for source_id, target_id, similarity_score in similarities:
+                # Create edge (Neo4j MERGE handles deduplication)
+                edge = neo4j_client.create_similarity_edge(
+                    session_id=session_id,
+                    source_id=source_id,
+                    target_id=target_id,
+                    similarity_score=similarity_score
+                )
 
-                # Add new node to existing nodes for future comparisons
-                existing_node_data.append(node_data)
+                edges_added.append({
+                    'source': source_id,
+                    'target': target_id,
+                    'similarity': similarity_score
+                })
+
+                # Step 6: Update Tier 1 metrics (weighted degree) for BOTH nodes
+                neo4j_client.update_weighted_degree(session_id, source_id)
+                neo4j_client.update_weighted_degree(session_id, target_id)
 
             # BATCH BROADCAST: Send all updates in single WebSocket message
             # This prevents frontend from re-rendering 50+ times
@@ -168,6 +165,11 @@ class GraphBuilder:
                     status="completed",
                     message=f"Added {len(nodes_added)} entities, {len(edges_added)} connections"
                 )
+
+            # Debug logging for edge verification
+            logger.info(f"✅ Created {len(edges_added)} edges for session {session_id}")
+            if edges_added:
+                logger.info(f"Edge details: {edges_added}")
 
             return ProcessingResult(
                 nodes_added=nodes_added,

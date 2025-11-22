@@ -91,11 +91,11 @@ export default function SemanticGraph({
         nodeRelSize={1}
         nodeVal={getNodeSize}
         nodeColor={getNodeColor}
-        linkWidth={link => (link.value || 0.75) * 0.5}  // Thin links like demo (was * 3)
+        linkWidth={link => Math.max((link.value || 0.75) * 3, 1.5)}  // Min 1.5px width for visibility
         linkDirectionalParticles={2}
         linkDirectionalParticleSpeed={0.005}
         backgroundColor="#020617"
-        linkColor={() => '#64748b'}
+        linkColor={() => '#94a3b8'}  // Brighter slate for better visibility
 
         // PERFORMANCE OPTIMIZATIONS:
         // 1. SLOWER physics convergence (gives nodes time to spread out)

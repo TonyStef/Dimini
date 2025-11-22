@@ -1,52 +1,215 @@
 """
-Tool Handlers for Hume AI Voice Agent
+Tool Handlers for Hume AI Webhook Integration
 
-Maps tool names to their handler functions.
+Handles execution of therapy tools called by Hume AI voice agent.
+Each handler corresponds to a tool defined in Hume AI configuration.
 """
 
-from typing import Dict, Callable, Any
+from typing import Dict
 import logging
+from .session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
-# TODO: Implement actual tool handlers
-# This is a stub to allow the backend to start
-# The actual implementation should map tool names to their handler functions
 
-TOOL_HANDLERS: Dict[str, Callable] = {
-    # Example structure:
-    # "save_session_note": handle_save_session_note,
-    # "mark_progress": handle_mark_progress,
-    # "flag_concern": handle_flag_concern,
-}
-
-
-async def handle_tool_call(tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+async def execute_save_note(session_id: str, params: Dict) -> Dict:
     """
-    Route tool calls to appropriate handlers.
+    Execute save_session_note tool.
+
+    Called when Hume AI agent wants to save an observation or insight.
 
     Args:
-        tool_name: Name of the tool to execute
-        parameters: Tool parameters from Hume AI
+        session_id: Session UUID
+        params: {
+            "note": str,
+            "category": "insight" | "observation" | "concern" | "progress",
+            "importance": "low" | "medium" | "high" | "critical" (optional)
+        }
 
     Returns:
-        Tool execution result
+        Success/error response dict
     """
-    handler = TOOL_HANDLERS.get(tool_name)
-
-    if not handler:
-        logger.warning(f"No handler found for tool: {tool_name}")
-        return {
-            "success": False,
-            "error": f"Unknown tool: {tool_name}"
-        }
-
     try:
-        result = await handler(parameters)
-        return {"success": True, "result": result}
-    except Exception as e:
-        logger.error(f"Error executing tool {tool_name}: {e}")
+        logger.info(f"Executing save_note for session {session_id}")
+
+        note = await SessionService.add_note(
+            session_id=session_id,
+            note=params["note"],
+            category=params["category"],
+            importance=params.get("importance", "medium"),
+            source="ai_agent"
+        )
+
         return {
-            "success": False,
-            "error": str(e)
+            "status": "success",
+            "note_id": note.get("id"),
+            "message": f"Note saved: {params['category']}"
         }
+
+    except KeyError as e:
+        logger.error(f"Missing required parameter: {e}")
+        return {
+            "status": "error",
+            "message": f"Missing required parameter: {e}"
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving note: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+async def execute_mark_progress(session_id: str, params: Dict) -> Dict:
+    """
+    Execute mark_progress tool.
+
+    Called when Hume AI agent identifies significant therapeutic progress.
+
+    Args:
+        session_id: Session UUID
+        params: {
+            "progress_type": "emotional_regulation" | "insight_gained" | "behavioral_change" | "coping_skill",
+            "description": str,
+            "evidence": str (optional)
+        }
+
+    Returns:
+        Success/error response dict
+    """
+    try:
+        logger.info(f"Executing mark_progress for session {session_id}: {params['progress_type']}")
+
+        # Write to PostgreSQL only (KG deferred to Phase 4)
+        progress = await SessionService.mark_progress(
+            session_id=session_id,
+            progress_type=params["progress_type"],
+            description=params["description"],
+            evidence=params.get("evidence")
+        )
+
+        return {
+            "status": "success",
+            "progress_id": progress.get("id"),
+            "message": f"Progress marked: {params['progress_type']}"
+        }
+
+    except KeyError as e:
+        logger.error(f"Missing required parameter: {e}")
+        return {
+            "status": "error",
+            "message": f"Missing required parameter: {e}"
+        }
+
+    except Exception as e:
+        logger.error(f"Error marking progress: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+async def execute_flag_concern(session_id: str, params: Dict) -> Dict:
+    """
+    Execute flag_concern tool.
+
+    Called when Hume AI agent identifies concerning patterns or risk factors.
+
+    Args:
+        session_id: Session UUID
+        params: {
+            "concern_type": "emotional_distress" | "risk_behavior" | "deterioration" | "crisis_indicator",
+            "severity": "moderate" | "high" | "urgent",
+            "description": str,
+            "recommended_action": str (optional)
+        }
+
+    Returns:
+        Success/error response dict
+    """
+    try:
+        logger.info(f"Executing flag_concern for session {session_id}: {params['concern_type']} ({params['severity']})")
+
+        concern = await SessionService.flag_concern(
+            session_id=session_id,
+            concern_type=params["concern_type"],
+            severity=params["severity"],
+            description=params["description"],
+            recommended_action=params.get("recommended_action")
+        )
+
+        # TODO Phase 5: Send urgent alert via WebSocket if severity is high/urgent
+        # if params["severity"] in ["high", "urgent"]:
+        #     await WebSocketManager.send_urgent_alert(session_id, concern)
+
+        return {
+            "status": "success",
+            "concern_id": concern.get("id"),
+            "message": f"Concern flagged: {params['concern_type']} ({params['severity']})"
+        }
+
+    except KeyError as e:
+        logger.error(f"Missing required parameter: {e}")
+        return {
+            "status": "error",
+            "message": f"Missing required parameter: {e}"
+        }
+
+    except Exception as e:
+        logger.error(f"Error flagging concern: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+async def execute_generate_summary(session_id: str, params: Dict) -> Dict:
+    """
+    Execute generate_session_summary tool.
+
+    Called when Hume AI agent needs to generate session summary.
+
+    Args:
+        session_id: Session UUID
+        params: {
+            "include_emotions": bool (optional),
+            "include_topics": bool (optional),
+            "include_recommendations": bool (optional)
+        }
+
+    Returns:
+        Success/error response dict with summary
+    """
+    try:
+        logger.info(f"Executing generate_summary for session {session_id}")
+
+        # Generate summary (KG data deferred to Phase 4)
+        summary = await SessionService.generate_detailed_summary(
+            session_id=session_id,
+            include_emotions=params.get("include_emotions", True),
+            include_topics=params.get("include_topics", True),
+            include_recommendations=params.get("include_recommendations", True)
+        )
+
+        return {
+            "status": "success",
+            "summary": summary,
+            "message": "Session summary generated"
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating summary: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+# Tool handler registry for routing
+TOOL_HANDLERS = {
+    "save_session_note": execute_save_note,
+    "mark_progress": execute_mark_progress,
+    "flag_concern": execute_flag_concern,
+    "generate_session_summary": execute_generate_summary
+}

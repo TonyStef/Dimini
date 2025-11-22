@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "concern_type": {
+      "type": "string",
+      "enum": ["emotional_distress", "risk_behavior", "deterioration", "crisis_indicator"],
+      "description": "Type of concern identified"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["moderate", "high", "urgent"],
+      "description": "Severity level of the concern"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the concerning pattern"
+    },
+    "recommended_action": {
+      "type": "string",
+      "description": "Suggested therapist action (optional)"
+    }
+  },
+  "required": ["concern_type", "severity", "description"]
+}

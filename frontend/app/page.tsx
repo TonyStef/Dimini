@@ -506,7 +506,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button variant="warm" size="xl" className="group">
+                  <Button variant="default" size="xl" className="group">
                     Request Demo
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>

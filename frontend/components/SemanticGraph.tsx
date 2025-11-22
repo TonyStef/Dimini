@@ -37,11 +37,35 @@ export default function SemanticGraph({
   const graphRef = useRef<any>();
   const hasZoomedRef = useRef(false);
 
-  // Auto-fit graph ONCE on initial load (prevent jarring re-zoom on new nodes)
+  // DISABLED: Auto-zoom was causing node magnification issues
+  // useEffect(() => {
+  //   if (graphRef.current && graphData.nodes.length > 0 && !hasZoomedRef.current) {
+  //     graphRef.current.zoomToFit(400, 200);
+  //     hasZoomedRef.current = true;
+  //   }
+  // }, [graphData.nodes.length]);
+
+  // DIAGNOSTIC: Log when nodes are added and reheat simulation
   useEffect(() => {
-    if (graphRef.current && graphData.nodes.length > 0 && !hasZoomedRef.current) {
-      graphRef.current.zoomToFit(400, 200);  // Increased padding: 50px → 200px
-      hasZoomedRef.current = true;
+    console.log('[GRAPH] Nodes updated, count:', graphData.nodes.length);
+    console.log('[GRAPH] Node positions:', graphData.nodes.map(n => ({
+      label: n.label,
+      x: n.x?.toFixed(1),
+      y: n.y?.toFixed(1),
+      type: n.type
+    })));
+
+    if (graphRef.current && graphData.nodes.length > 0) {
+      setTimeout(() => {
+        console.log('[REHEAT] Attempting reheat, graphRef exists:', !!graphRef.current);
+        console.log('[REHEAT] d3ReheatSimulation method exists:', typeof graphRef.current?.d3ReheatSimulation);
+        if (graphRef.current?.d3ReheatSimulation) {
+          graphRef.current.d3ReheatSimulation();
+          console.log('[REHEAT] ✅ Reheat called successfully');
+        } else {
+          console.warn('[REHEAT] ⚠️ d3ReheatSimulation method not available');
+        }
+      }, 100);
     }
   }, [graphData.nodes.length]);
 
@@ -53,7 +77,7 @@ export default function SemanticGraph({
     );
   }
 
-  // Node size based on selected metric
+  // Node size based on selected metric (CAPPED at 40px to prevent massive nodes)
   const getNodeSize = (node: any) => {
     const baseSize = 5;
     let value = 0;
@@ -70,7 +94,15 @@ export default function SemanticGraph({
         break;
     }
 
-    return baseSize + value * 3;
+    const calculatedSize = baseSize + value * 3;
+    const cappedSize = Math.min(calculatedSize, 40);  // CAP at 40px maximum
+
+    // Log oversized nodes
+    if (calculatedSize > 40) {
+      console.log('[NODE-SIZE] Capping oversized node:', node.label, 'from', calculatedSize.toFixed(1), 'to 40px');
+    }
+
+    return cappedSize;
   };
 
   // Node color based on type (match landing page demo)
@@ -83,6 +115,16 @@ export default function SemanticGraph({
       <ForceGraph2D
         ref={graphRef}
         graphData={graphData}
+
+        // CRITICAL FIX: Tell react-force-graph how to read node/link IDs
+        nodeId="id"
+        linkSource="source"
+        linkTarget="target"
+
+        // HIERARCHICAL LAYOUT: Guaranteed node separation (radial pattern)
+        dagMode="radialout"
+        dagLevelDistance={150}
+
         nodeLabel={(node: any) => `${node.label} (${highlightMetric}: ${
           highlightMetric === 'weighted_degree' ? node.weightedDegree?.toFixed(2) :
           highlightMetric === 'pagerank' ? node.pagerank?.toFixed(3) :
@@ -97,17 +139,19 @@ export default function SemanticGraph({
         backgroundColor="#020617"
         linkColor={() => '#94a3b8'}  // Brighter slate for better visibility
 
-        // PERFORMANCE OPTIMIZATIONS:
-        // 1. SLOWER physics convergence (gives nodes time to spread out)
-        d3AlphaDecay={0.01}  // 5x slower - more time to spread (was 0.05)
-        d3VelocityDecay={0.3}  // Less damping - allows more movement (was 0.4)
-        warmupTicks={300}  // 3x more pre-stabilization (was 100)
-        cooldownTime={15000}  // 15 seconds to settle properly (was 5000)
+        // Physics simulation (optimized for small graphs)
+        d3AlphaDecay={0.01}  // SLOWER decay - let forces work longer
+        d3VelocityDecay={0.4}
+        warmupTicks={300}  // INCREASED for better initial separation
+        cooldownTime={5000}
 
-        // Force simulation configuration (match demo appearance)
-        d3ForceCharge={() => -2500}  // 67% stronger repulsion (was -1500)
-        d3ForceLink={(link) => link.value ? 200 / link.value : 200}  // 33% longer links (was 150)
-        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.03 })}  // Weak centering for better distribution
+        // FIXED Force parameters
+        d3ForceCharge={() => -800}  // Strong repulsion force for separation
+        d3ForceLink={(link) => (link.value || 0.75) * 50}  // FIXED: Now properly proportional (was backwards!)
+        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.1 })}  // Weak centering
+
+        // Collision detection to prevent node overlap
+        d3ForceCollide={(node: any) => getNodeSize(node) + 20}  // Node size + 20px padding
 
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {
@@ -138,6 +182,11 @@ export default function SemanticGraph({
           ctx.beginPath();
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
           ctx.fill();
+
+          // Draw white border around node (like target image)
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2 / globalScale;
+          ctx.stroke();
 
           // Draw label (always visible like demo)
           ctx.font = `${fontSize}px Sans-Serif`;

@@ -84,7 +84,13 @@ export function useRealtimeGraph(sessionId: string | null) {
         weightedDegree: node.weighted_degree || 0,
         pagerank: node.pagerank || 0.15,
         betweenness: node.betweenness || 0,
-        mentionCount: node.mention_count || 1
+        mentionCount: node.mention_count || 1,
+
+        // Random initial positions to break force simulation symmetry
+        x: (Math.random() - 0.5) * 600,  // Random X in 600px range (±300px)
+        y: (Math.random() - 0.5) * 600,  // Random Y in 600px range (±300px)
+        vx: 0,  // Initial velocity X
+        vy: 0   // Initial velocity Y
       }));
 
       // Convert edges
@@ -201,7 +207,13 @@ export function useRealtimeGraph(sessionId: string | null) {
         weightedDegree: node.weightedDegree || 0,
         pagerank: node.pagerank || 0.15,
         betweenness: node.betweenness || 0,
-        mentionCount: node.mentionCount || 1
+        mentionCount: node.mentionCount || 1,
+
+        // Random initial positions to break force simulation symmetry
+        x: (Math.random() - 0.5) * 600,  // Random X in 600px range (±300px)
+        y: (Math.random() - 0.5) * 600,  // Random Y in 600px range (±300px)
+        vx: 0,  // Initial velocity X
+        vy: 0   // Initial velocity Y
       }));
 
       const transformedEdges: GraphEdge[] = (data.links || []).map((edge: any) => ({

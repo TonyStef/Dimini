@@ -122,6 +122,14 @@ export interface GraphNode {
   pagerank?: number;
   betweenness?: number;
   mentionCount?: number;
+
+  // D3 Force Simulation properties (for react-force-graph-2d)
+  x?: number;  // Position X
+  y?: number;  // Position Y
+  vx?: number;  // Velocity X
+  vy?: number;  // Velocity Y
+  fx?: number;  // Fixed position X (for pinning nodes)
+  fy?: number;  // Fixed position Y (for pinning nodes)
 }
 
 export interface GraphEdge {

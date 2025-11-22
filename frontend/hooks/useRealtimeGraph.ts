@@ -131,10 +131,14 @@ export function useRealtimeGraph(sessionId: string | null) {
       setLoading(true);
       setError(null);
 
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('token');
+
       const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/graph`, {
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         }
       });
 

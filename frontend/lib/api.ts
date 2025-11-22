@@ -185,7 +185,9 @@ export const patientsAPI = {
    * Start a new session for a patient
    */
   async startSession(patientId: string): Promise<Session> {
-    const response = await api.post<Session>(`/api/patients/${patientId}/sessions/start`);
+    const response = await api.post<Session>('/api/sessions/start', {
+      patient_id: patientId
+    });
     return response.data;
   },
 

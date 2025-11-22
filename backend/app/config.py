@@ -4,9 +4,17 @@ from typing import List
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
-    
-    # OpenAI
-    OPENAI_API_KEY: str
+
+    # Neo4j
+    NEO4J_URI: str
+    NEO4J_USER: str
+    NEO4J_PASSWORD: str
+
+    # Together AI
+    TOGETHER_API_KEY: str
+
+    # Keep for backward compatibility / embeddings fallback
+    OPENAI_API_KEY: str = ""
     
     # Server
     HOST: str = "0.0.0.0"

@@ -1,4 +1,4 @@
-import openai
+from together import Together
 import json
 import logging
 from typing import Dict, List
@@ -7,8 +7,8 @@ from app.models.graph import ExtractedEntity, EntityExtractionResult, NodeType
 
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+# Initialize Together AI client
+client = Together(api_key=settings.TOGETHER_API_KEY)
 
 class EntityExtractor:
     """Extract topics and emotions from therapy transcripts using GPT-4"""
@@ -25,44 +25,21 @@ Rules:
 - Use clear, title-case labels for display: "Work Stress", "Anxiety", "Girlfriend"
 - Only extract entities EXPLICITLY mentioned in the text
 - Avoid inferring entities not clearly discussed
-- Each entity should be distinct and meaningful in the therapy context"""
+- Each entity should be distinct and meaningful in the therapy context
 
-        self.function_schema = {
-            "name": "extract_therapy_entities",
-            "description": "Extract topics and emotions from therapy conversation",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "entities": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "node_id": {
-                                    "type": "string",
-                                    "description": "Normalized ID (lowercase, underscores): 'anxiety', 'work_stress'"
-                                },
-                                "node_type": {
-                                    "type": "string",
-                                    "enum": ["topic", "emotion"],
-                                    "description": "Is this a topic or emotion?"
-                                },
-                                "label": {
-                                    "type": "string",
-                                    "description": "Display label (title case): 'Anxiety', 'Work Stress'"
-                                },
-                                "context": {
-                                    "type": "string",
-                                    "description": "Brief context of how it was mentioned"
-                                }
-                            },
-                            "required": ["node_id", "node_type", "label"]
-                        }
-                    }
-                },
-                "required": ["entities"]
-            }
-        }
+IMPORTANT: Respond ONLY with a valid JSON object in this exact format:
+{
+  "entities": [
+    {
+      "node_id": "anxiety",
+      "node_type": "emotion",
+      "label": "Anxiety",
+      "context": "mentioned in relation to work"
+    }
+  ]
+}
+
+Do not include any other text, explanations, or markdown formatting. Just the raw JSON."""
         
     async def extract(self, transcript_chunk: str) -> EntityExtractionResult:
         """
@@ -79,26 +56,36 @@ Rules:
             
         try:
             logger.info(f"Extracting entities from chunk: {transcript_chunk[:100]}...")
-            
+
             response = client.chat.completions.create(
-                model=settings.GPT_MODEL,
+                model="moonshotai/Kimi-K2-Thinking",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"Extract entities from this therapy conversation:\n\n{transcript_chunk}"}
                 ],
-                functions=[self.function_schema],
-                function_call={"name": "extract_therapy_entities"},
                 temperature=0.3,  # Low temperature for consistent extraction
-                max_tokens=500
+                max_tokens=2000  # Increased for thinking model (reasoning + answer)
             )
-            
-            # Parse function call result
-            function_call = response.choices[0].message.function_call
-            if not function_call:
-                logger.warning("No function call in response")
+
+            # Parse JSON response
+            logger.info(f"Together AI Response: {response}")
+            content = response.choices[0].message.content
+            if not content:
+                logger.warning(f"No content in response. Full response: {response}")
+                logger.warning(f"Response dict: {response.model_dump() if hasattr(response, 'model_dump') else str(response)}")
                 return EntityExtractionResult(entities=[])
-                
-            result = json.loads(function_call.arguments)
+
+            # Clean up any markdown formatting if present
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+
+            result = json.loads(content)
             
             # Convert to ExtractedEntity objects
             entities = []

@@ -68,19 +68,20 @@ class GraphAlgorithms:
         logger.info(f"Running PageRank (streaming, {iterations} iter) for session {session_id}")
 
         # Stream PageRank computation directly from graph (no projection)
+        # GDS Streaming syntax: gds.pageRank.stream(nodeQuery, relationshipQuery, {config})
         pagerank_query = """
-        CALL gds.pageRank.stream({
-            nodeQuery: "MATCH (n:Entity {session_id: $session_id}) RETURN id(n) AS id",
-            relationshipQuery: "
-                MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
-                RETURN id(source) AS source, id(target) AS target, r.similarity_score AS weight
-            ",
-            seedProperty: $seed_property,
-            relationshipWeightProperty: 'weight',
-            dampingFactor: 0.85,
-            maxIterations: $max_iterations,
-            tolerance: 0.0001
-        })
+        CALL gds.pageRank.stream(
+            "MATCH (n:Entity {session_id: $session_id}) RETURN id(n) AS id",
+            "MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
+             RETURN id(source) AS source, id(target) AS target, r.similarity_score AS weight",
+            {
+                seedProperty: $seed_property,
+                relationshipWeightProperty: 'weight',
+                dampingFactor: 0.85,
+                maxIterations: $max_iterations,
+                tolerance: 0.0001
+            }
+        )
         YIELD nodeId, score
 
         // Write scores back to nodes
@@ -159,14 +160,13 @@ class GraphAlgorithms:
         logger.info(f"Running Betweenness Centrality (streaming) for session {session_id}")
 
         # Stream betweenness computation directly from graph
+        # GDS Streaming syntax: gds.betweenness.stream(nodeQuery, relationshipQuery)
         betweenness_query = """
-        CALL gds.betweenness.stream({
-            nodeQuery: "MATCH (n:Entity {session_id: $session_id}) RETURN id(n) AS id",
-            relationshipQuery: "
-                MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
-                RETURN id(source) AS source, id(target) AS target
-            "
-        })
+        CALL gds.betweenness.stream(
+            "MATCH (n:Entity {session_id: $session_id}) RETURN id(n) AS id",
+            "MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
+             RETURN id(source) AS source, id(target) AS target"
+        )
         YIELD nodeId, score
 
         // Write scores back to nodes

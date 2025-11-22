@@ -41,10 +41,21 @@ export default function SessionViewPage() {
 
   const endSession = async () => {
     try {
-      await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/end`, {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/end`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to end session: ${response.statusText}`);
+      }
+
       setSessionStatus('completed');
     } catch (error) {
       console.error('Failed to end session:', error);

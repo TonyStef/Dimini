@@ -147,10 +147,10 @@ Strong Connections: {'; '.join(connections[:5])}
                 progress_notes=result.get("progress_notes")
             )
             
-            # Update session with summary
+            # Update session with summary (use mode='json' for Prisma Json field type)
             await db.session.update(
                 where={"id": session_id},
-                data={"summary": summary.model_dump()}
+                data={"summary": summary.model_dump(mode='json')}
             )
             
             logger.info(f"Generated summary for session {session_id}")

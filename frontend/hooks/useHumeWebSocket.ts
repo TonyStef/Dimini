@@ -102,8 +102,15 @@ export const useHumeWebSocket = (configId: string) => {
   const sendAudio = useCallback(async (audioBlob: Blob) => {
     console.log(`[HUME] Sending: ${audioBlob.size} bytes, ${audioBlob.type}`);
 
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error('[HUME] WebSocket NOT READY:', wsRef.current?.readyState);
+    if (!wsRef.current) {
+      console.warn('[HUME] WebSocket not initialized. Call connect() first.');
+      return;
+    }
+
+    if (wsRef.current.readyState !== WebSocket.OPEN) {
+      const stateNames = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+      const stateName = stateNames[wsRef.current.readyState] || 'UNKNOWN';
+      console.warn(`[HUME] WebSocket not ready (state: ${stateName}). Dropping audio chunk.`);
       return;
     }
 

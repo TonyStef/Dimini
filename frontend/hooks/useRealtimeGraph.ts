@@ -160,7 +160,7 @@ export function useRealtimeGraph(sessionId: string | null) {
     });
 
     socket.on('disconnect', (reason: string) => {
-      console.error('[useRealtimeGraph] ❌ Socket DISCONNECTED - Reason:', reason);
+      console.log('[useRealtimeGraph] Socket disconnected -', reason);
       if (reason === 'io server disconnect') {
         // Server disconnected us, reconnect manually
         console.log('[useRealtimeGraph] Server disconnected, attempting manual reconnect...');

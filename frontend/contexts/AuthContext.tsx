@@ -46,6 +46,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ========================================
 
   const checkAuth = useCallback(async () => {
+    // Skip auth check on public pages
+    const publicPages = ['/', '/login', '/register'];
+    const isPublicPage = typeof window !== 'undefined' &&
+      publicPages.includes(window.location.pathname);
+
+    if (isPublicPage) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const savedToken = localStorage.getItem('token');
 

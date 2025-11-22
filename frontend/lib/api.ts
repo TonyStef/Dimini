@@ -53,6 +53,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<APIError>) => {
+    // Handle network errors (backend unreachable)
+    if (!error.response) {
+      console.error('Network error - backend unreachable:', error.message);
+      // Don't redirect on network errors, just reject
+      return Promise.reject(error);
+    }
+
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       // Clear token and redirect to login

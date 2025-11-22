@@ -71,9 +71,9 @@ export default function SemanticGraph({
     return baseSize + value * 3;
   };
 
-  // Node color based on type
+  // Node color based on type (match landing page demo)
   const getNodeColor = (node: any) => {
-    return node.type === 'emotion' ? '#ef4444' : '#3b82f6';  // red vs blue
+    return node.type === 'emotion' ? '#d98282' : '#6ea8d3';  // demo red vs demo blue
   };
 
   return (
@@ -102,10 +102,10 @@ export default function SemanticGraph({
         warmupTicks={100}  // Pre-stabilize before render
         cooldownTime={5000}  // Stop physics after 5s
 
-        // Force simulation configuration (stronger forces for better spacing)
-        d3ForceCharge={() => -800}  // Strong repulsion between nodes
-        d3ForceLink={(link) => link.value ? 100 / link.value : 100}  // Larger link distance
-        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.1 })}  // Stronger centering
+        // Force simulation configuration (match demo appearance)
+        d3ForceCharge={() => -1500}  // Very strong repulsion to spread nodes out
+        d3ForceLink={(link) => link.value ? 150 / link.value : 150}  // Large link distances
+        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.03 })}  // Weak centering for better distribution
 
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {
@@ -129,13 +129,11 @@ export default function SemanticGraph({
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
           ctx.fill();
 
-          // Draw label (only if zoomed in enough)
-          if (globalScale > 0.8) {
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.fillText(label, node.x, node.y + size + fontSize);
-          }
+          // Draw label (always visible like demo)
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(label, node.x, node.y + size + fontSize);
         }}
 
         onNodeClick={(node) => {

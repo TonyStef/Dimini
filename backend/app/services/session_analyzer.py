@@ -80,28 +80,32 @@ Be professional, empathetic, and focused on therapeutic value."""
                 logger.warning(f"Session {session_id} not found or has no transcript")
                 return None
                 
-            # Fetch graph data for context
-            nodes = await db.graphnode.find_many(
-                where={"sessionId": session_id},
-                order=[{"mentionCount": "desc"}, {"nodeType": "asc"}]
-            )
-            
-            edges = await db.graphedge.find_many(
-                where={"sessionId": session_id},
-                order={"similarityScore": "desc"},
-                take=10  # Top 10 strongest connections
-            )
-            
+            # Fetch graph data from Neo4j
+            from app.graph.neo4j_client import neo4j_client
+
+            nodes = neo4j_client.get_session_entities(session_id)
+
+            # Fetch edges from Neo4j
+            edges_query = """
+            MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
+            RETURN source.node_id AS source_id,
+                   source.label AS source_label,
+                   target.node_id AS target_id,
+                   target.label AS target_label,
+                   r.similarity_score AS similarity
+            ORDER BY r.similarity_score DESC
+            LIMIT 10
+            """
+            edges = neo4j_client.execute_query(edges_query, {"session_id": session_id})
+
             # Build context for analysis
-            topics = [n.label for n in nodes if n.nodeType == "TOPIC"][:10]
-            emotions = [n.label for n in nodes if n.nodeType == "EMOTION"][:10]
-            
+            topics = [n['label'] for n in nodes if n['node_type'] == "TOPIC"][:10]
+            emotions = [n['label'] for n in nodes if n['node_type'] == "EMOTION"][:10]
+
             # Build connections summary
             connections = []
             for edge in edges:
-                source = next((n.label for n in nodes if n.nodeId == edge.sourceNodeId), edge.sourceNodeId)
-                target = next((n.label for n in nodes if n.nodeId == edge.targetNodeId), edge.targetNodeId)
-                connections.append(f"{source} ↔ {target} (strength: {edge.similarityScore:.2f})")
+                connections.append(f"{edge['source_label']} ↔ {edge['target_label']} (strength: {edge['similarity']:.2f})")
                 
             analysis_context = f"""
 Session Transcript:
@@ -167,54 +171,56 @@ Strong Connections: {'; '.join(connections[:5])}
             Dictionary with session insights
         """
         try:
-            # Get node and edge counts
-            node_count = await db.graphnode.count(
-                where={"sessionId": session_id}
-            )
-            
-            edge_count = await db.graphedge.count(
-                where={"sessionId": session_id}
-            )
-            
-            # Get most mentioned nodes
-            top_nodes = await db.graphnode.find_many(
-                where={"sessionId": session_id},
-                order={"mentionCount": "desc"},
-                take=5
-            )
-            
-            # Get strongest connections
-            top_edges = await db.graphedge.find_many(
-                where={"sessionId": session_id},
-                order={"similarityScore": "desc"},
-                take=5
-            )
-            
+            from app.graph.neo4j_client import neo4j_client
+
+            # Get all nodes from Neo4j
+            all_nodes = neo4j_client.get_session_entities(session_id)
+
+            # Get node count
+            node_count = len(all_nodes)
+
+            # Get edges from Neo4j
+            edges_query = """
+            MATCH (source:Entity {session_id: $session_id})-[r:SIMILAR_TO]-(target:Entity)
+            RETURN source.node_id AS source_id,
+                   source.label AS source_label,
+                   target.node_id AS target_id,
+                   target.label AS target_label,
+                   r.similarity_score AS similarity
+            ORDER BY r.similarity_score DESC
+            """
+            all_edges = neo4j_client.execute_query(edges_query, {"session_id": session_id})
+            edge_count = len(all_edges)
+
+            # Get top nodes (sorted by mention_count)
+            top_nodes = sorted(all_nodes, key=lambda n: n.get('mention_count', 0), reverse=True)[:5]
+            top_edges = all_edges[:5]  # Already sorted by similarity
+
             # Build insights
             insights = {
                 "total_nodes": node_count,
                 "total_edges": edge_count,
                 "top_topics": [
-                    {"label": n.label, "mentions": n.mentionCount}
-                    for n in top_nodes if n.nodeType == "TOPIC"
+                    {"label": n['label'], "mentions": n.get('mention_count', 0)}
+                    for n in top_nodes if n['node_type'] == "TOPIC"
                 ],
                 "top_emotions": [
-                    {"label": n.label, "mentions": n.mentionCount}
-                    for n in top_nodes if n.nodeType == "EMOTION"
+                    {"label": n['label'], "mentions": n.get('mention_count', 0)}
+                    for n in top_nodes if n['node_type'] == "EMOTION"
                 ],
                 "strongest_connections": []
             }
-            
+
             # Add connection details
-            all_nodes = {n.nodeId: n.label for n in await db.graphnode.find_many(where={"sessionId": session_id})}
+            node_labels = {n['node_id']: n['label'] for n in all_nodes}
             
             for edge in top_edges:
-                source_label = all_nodes.get(edge.sourceNodeId, edge.sourceNodeId)
-                target_label = all_nodes.get(edge.targetNodeId, edge.targetNodeId)
+                source_label = edge['source_label']
+                target_label = edge['target_label']
                 insights["strongest_connections"].append({
                     "source": source_label,
                     "target": target_label,
-                    "strength": edge.similarityScore
+                    "strength": edge['similarity']
                 })
                 
             return insights

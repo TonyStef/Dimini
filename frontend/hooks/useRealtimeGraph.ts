@@ -36,27 +36,44 @@ export function useRealtimeGraph(sessionId: string | null) {
     loadInitialGraph();
 
     // Connect to Socket.IO for real-time updates
+    console.log('[useRealtimeGraph] Connecting to Socket.IO...', BACKEND_URL);
     socket = io(BACKEND_URL, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      autoConnect: true,
+      forceNew: true
     });
 
     socket.on('connect', () => {
-      console.log('[useRealtimeGraph] Socket connected');
+      console.log('[useRealtimeGraph] ✅ Socket CONNECTED - ID:', socket?.id);
 
       // Join session room
+      console.log('[useRealtimeGraph] Joining session room:', sessionId);
       socket?.emit('join_session', { session_id: sessionId });
     });
 
     socket.on('joined_session', (data: any) => {
-      console.log('[useRealtimeGraph] Joined session:', data.session_id);
+      console.log('[useRealtimeGraph] ✅ JOINED session room:', data.session_id);
+    });
+
+    // Listen for initial graph state (sent when joining session)
+    socket.on('graph_state', (payload: any) => {
+      console.log('[useRealtimeGraph] 📊 Initial graph state received:', payload);
+      // This is sent by backend when we join, but we already load via REST API
+      // Could use this as a fallback if REST API fails
     });
 
     // BATCH UPDATE LISTENER: Receive all nodes+edges in single message
     socket.on('graph_batch_update', (payload: any) => {
-      console.log('[useRealtimeGraph] Batch update:', payload);
+      console.log('[useRealtimeGraph] 🎯 BATCH UPDATE received:', {
+        nodes: payload.nodes?.length || 0,
+        edges: payload.edges?.length || 0,
+        status: payload.status,
+        message: payload.message
+      });
+      console.log('[useRealtimeGraph] Full payload:', payload);
 
       // Convert nodes
       const newNodes: GraphNode[] = (payload.nodes || []).map((node: any) => ({
@@ -76,6 +93,13 @@ export function useRealtimeGraph(sessionId: string | null) {
         target: edge.target,
         value: edge.similarity
       }));
+
+      console.log('[useRealtimeGraph] Adding to graph:', {
+        newNodes: newNodes.length,
+        newEdges: newEdges.length,
+        currentNodes: graphData.nodes.length,
+        currentEdges: graphData.links.length
+      });
 
       // Single state update (triggers ONE re-render instead of 50+)
       setGraphData(prev => ({
@@ -106,12 +130,32 @@ export function useRealtimeGraph(sessionId: string | null) {
       }));
     });
 
-    socket.on('disconnect', () => {
-      console.log('[useRealtimeGraph] Socket disconnected');
+    socket.on('disconnect', (reason: string) => {
+      console.error('[useRealtimeGraph] ❌ Socket DISCONNECTED - Reason:', reason);
+      if (reason === 'io server disconnect') {
+        // Server disconnected us, reconnect manually
+        console.log('[useRealtimeGraph] Server disconnected, attempting manual reconnect...');
+        socket?.connect();
+      }
+    });
+
+    socket.on('connect_error', (err: any) => {
+      console.error('[useRealtimeGraph] ❌ Connection ERROR:', err.message, err);
+      setError(`Socket.IO connection failed: ${err.message}`);
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber: number) => {
+      console.log('[useRealtimeGraph] 🔄 Reconnection attempt:', attemptNumber);
+    });
+
+    socket.on('reconnect', (attemptNumber: number) => {
+      console.log('[useRealtimeGraph] ✅ Reconnected after', attemptNumber, 'attempts');
+      // Rejoin session room after reconnection
+      socket?.emit('join_session', { session_id: sessionId });
     });
 
     socket.on('error', (err: any) => {
-      console.error('[useRealtimeGraph] Socket error:', err);
+      console.error('[useRealtimeGraph] ❌ Socket error:', err);
       setError(err.message || 'WebSocket connection error');
     });
 

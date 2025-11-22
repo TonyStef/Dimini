@@ -74,7 +74,7 @@ from app.api import auth, patients, sessions, webhooks, hume
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
-app.include_router(webhooks.router, prefix="/api")
+app.include_router(webhooks.router)  # No /api prefix - external webhooks go directly to /webhooks/*
 app.include_router(hume.router, tags=["Hume AI"])
 
 @app.get("/")

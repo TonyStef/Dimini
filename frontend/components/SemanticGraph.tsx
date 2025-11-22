@@ -36,10 +36,15 @@ export default function SemanticGraph({
 }: SemanticGraphProps) {
   const graphRef = useRef<any>();
 
-  // Auto-fit graph when new nodes appear
+  // Auto-fit graph when new nodes appear or on initial load
   useEffect(() => {
     if (graphRef.current && graphData.nodes.length > 0) {
-      graphRef.current.zoomToFit(400, 50);
+      // Delay to allow physics to settle before zooming
+      const timer = setTimeout(() => {
+        graphRef.current.zoomToFit(1000, 100);  // FIXED: Longer duration, more padding
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [graphData.nodes.length]);
 
@@ -53,7 +58,7 @@ export default function SemanticGraph({
 
   // Node size based on selected metric
   const getNodeSize = (node: any) => {
-    const baseSize = 5;
+    const baseSize = 4;  // FIXED: Reduced from 5 to 4
     let value = 0;
 
     switch (highlightMetric) {
@@ -68,7 +73,7 @@ export default function SemanticGraph({
         break;
     }
 
-    return baseSize + value * 3;
+    return baseSize + value * 0.2;  // FIXED: Reduced multiplier from 3 to 0.2
   };
 
   // Node color based on type (match landing page demo)
@@ -96,16 +101,22 @@ export default function SemanticGraph({
         linkColor={() => '#64748b'}
 
         // PERFORMANCE OPTIMIZATIONS:
-        // 1. Faster physics convergence
-        d3AlphaDecay={0.05}  // Faster convergence (was 0.02)
-        d3VelocityDecay={0.4}  // More damping (was 0.3)
-        warmupTicks={100}  // Pre-stabilize before render
-        cooldownTime={5000}  // Stop physics after 5s
+        // Balanced physics convergence for better settling
+        d3AlphaDecay={0.02}  // FIXED: Reverted to slower for better layout
+        d3VelocityDecay={0.3}  // FIXED: Natural damping (reverted from 0.4)
+        warmupTicks={200}  // FIXED: Increased pre-stabilization from 100 to 200
+        cooldownTime={10000}  // FIXED: Increased to 10s for complex graphs
 
-        // Force simulation configuration (match demo appearance)
-        d3ForceCharge={() => -1500}  // Very strong repulsion to spread nodes out
-        d3ForceLink={(link) => link.value ? 150 / link.value : 150}  // Large link distances
-        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.03 })}  // Weak centering for better distribution
+        // Force simulation configuration
+        d3ForceCharge={() => -2500}  // FIXED: Increased repulsion from -1500 to -2500
+        d3ForceLink={(link) => link.value ? 250 / link.value : 250}  // FIXED: Increased from 150 to 250
+        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.05 })}  // FIXED: Increased from 0.03 to 0.05
+
+        // COLLISION DETECTION - Prevents node overlap
+        d3ForceCollide={(node: any) => {
+          const nodeSize = getNodeSize(node);
+          return nodeSize + 8;  // Node radius + 8px minimum spacing
+        }}
 
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {

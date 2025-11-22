@@ -42,6 +42,9 @@ export const useVoiceSession = (
       // Connect to Hume
       await connect(patientId);
 
+      // Wait for Hume to fully initialize (avoid race condition with first audio chunk)
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       // Start microphone capture
       await startCapture(async (audioBlob) => {
         await sendAudio(audioBlob);
@@ -141,11 +144,23 @@ export const useVoiceSession = (
           break;
 
         case 'error':
+          // Filter empty/benign error messages from Hume handshake
+          const errorMsg = message?.message || message?.error || null;
+          const messageKeys = Object.keys(message);
+
+          console.log('[DEBUG] Error message keys:', messageKeys, 'errorMsg:', errorMsg);
+
+          if (!errorMsg && messageKeys.length <= 1) {
+            // Empty error (only has 'type' field) - benign handshake message
+            console.log('[Hume] Received empty error message (handshake), ignoring');
+            break;
+          }
+
           console.error('Hume error:', message);
           setState(prev => ({
             ...prev,
             status: 'error',
-            error: message?.message ?? 'Voice session error'
+            error: errorMsg ?? 'Voice session error'
           }));
           break;
       }

@@ -2,9 +2,9 @@
 
 ## 🆕 LATEST SESSION (Nov 22, 2025 - Evening)
 
-**Duration:** ~3 hours
+**Duration:** ~3 hours (+ ongoing fixes tonight)
 **Goal:** End-to-end KG testing with frontend + voice integration setup
-**Status:** ✅ Infrastructure Ready - Voice integration configured, ready for live testing
+**Status:** ⚠️ Voice agent connects but still errors (config + payload fixes in progress)
 
 ### What We Accomplished This Session
 
@@ -146,17 +146,28 @@ curl -X POST http://localhost:8000/api/sessions/cmia4tts40003ns3wzafushw6/cancel
 | `frontend/.env.local` | Added Hume AI credentials | ✅ Configured |
 | Session `cmia4tts40003ns3wzafushw6` | Cancelled via API | ✅ Resolved |
 
-### ⚠️ Known Issues (Non-Blocking)
+### ⚠️ Known Issues (Current blockers)
 
-1. **PageRank/Betweenness Cypher Errors**
-   - Background algorithm tasks failing
-   - Does NOT block entity extraction or graph creation
-   - Can use weighted_degree metric instead
+1. **Betweenness background spam**
+   - `gds.betweenness.stream` still runs on every session start and throws `Type mismatch: expected String but was Map`.
+   - Temporary fix: disable task via `BETWEENNESS_ENABLED = False` (added in code but restart required).
 
-2. **Together AI Rate Limiting**
-   - 600 RPM limit on embeddings API
-   - Retry logic implemented (exponential backoff)
-   - Recommend 10-15 second delays between transcripts
+2. **Voice agent config errors**
+   - Initial error: `config_not_found` because the frontend env used `HUME_CONFIG_ID` instead of `NEXT_PUBLIC_HUME_CONFIG_ID` → Hume saw `config_id=undefined`.
+   - After reconnect, new Hume WS errors:
+     - `code 'E0101' slug 'payload_parse'`: caused by sending `encoding: 'webm'`. Hume expects `linear16` (48kHz mono).
+     - `code 'I0100' slug 'uncaught'`: bubbled up after payload parse failed.
+   - Fix applied: update `frontend/hooks/useHumeWebSocket.ts` to send:
+     ```ts
+     audio: { encoding: 'linear16', sample_rate: 48000, channels: 1 }
+     ```
+   - Need to rebuild frontend + confirm WS URL now shows `config_id=<uuid>` and no payload errors.
+
+3. **401s when ending quick-start sessions**
+   - `POST /api/sessions/quick-start-session/end` returns 401 if the user is logged out. Harmless but clutters console.
+
+4. **Together AI rate limiting**
+   - Still applies; keep 10–15 s delays between transcript calls.
 
 ### 🎬 Ready for Demo!
 
@@ -170,7 +181,7 @@ curl -X POST http://localhost:8000/api/sessions/cmia4tts40003ns3wzafushw6/cancel
 4. See graph nodes appear (red = emotions, blue = topics)
 5. Observe edges connecting similar concepts
 
-**Time to Working Demo:** ~5 minutes from here
+**Time to Working Demo:** Once Hume payload errors stop (test again after frontend rebuild)
 
 ---
 

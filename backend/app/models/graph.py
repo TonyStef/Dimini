@@ -1,13 +1,15 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from enum import Enum
+
+from app.models.base import DiminiBaseModel
 
 class NodeType(str, Enum):
     TOPIC = "TOPIC"
     EMOTION = "EMOTION"
 
-class GraphNodeBase(BaseModel):
+class GraphNodeBase(DiminiBaseModel):
     node_id: str
     node_type: NodeType
     label: str
@@ -26,7 +28,7 @@ class GraphNodeResponse(GraphNodeBase):
     class Config:
         from_attributes = True
 
-class GraphEdgeBase(BaseModel):
+class GraphEdgeBase(DiminiBaseModel):
     source_node_id: str
     target_node_id: str
     similarity_score: float
@@ -44,32 +46,32 @@ class GraphEdgeResponse(GraphEdgeBase):
     class Config:
         from_attributes = True
 
-class GraphData(BaseModel):
+class GraphData(DiminiBaseModel):
     nodes: List[GraphNodeResponse]
     edges: List[GraphEdgeResponse]
 
 # Entity extraction models
-class ExtractedEntity(BaseModel):
+class ExtractedEntity(DiminiBaseModel):
     node_id: str
     node_type: NodeType
     label: str
     context: Optional[str] = None
 
-class EntityExtractionResult(BaseModel):
+class EntityExtractionResult(DiminiBaseModel):
     entities: List[ExtractedEntity]
 
 # Frontend graph format
-class FrontendNode(BaseModel):
+class FrontendNode(DiminiBaseModel):
     id: str  # node_id
     label: str
     type: str  # 'topic' or 'emotion'
     group: int  # 1 = emotion, 2 = topic
 
-class FrontendEdge(BaseModel):
+class FrontendEdge(DiminiBaseModel):
     source: str  # node_id
     target: str  # node_id
     value: float  # similarity_score
 
-class FrontendGraphData(BaseModel):
+class FrontendGraphData(DiminiBaseModel):
     nodes: List[FrontendNode]
     links: List[FrontendEdge]

@@ -1,8 +1,11 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import EmailStr, Field, field_validator
 from datetime import datetime
 from typing import Optional
 
-class UserBase(BaseModel):
+from app.models.base import DiminiBaseModel
+
+
+class UserBase(DiminiBaseModel):
     email: EmailStr
     name: str
 
@@ -17,7 +20,7 @@ class UserCreate(UserBase):
             raise ValueError("Password must be at most 72 bytes long")
         return value
 
-class UserLogin(BaseModel):
+class UserLogin(DiminiBaseModel):
     email: EmailStr
     password: str
 
@@ -32,10 +35,10 @@ class UserResponse(UserBase):
         from_attributes = True
         populate_by_name = True
 
-class Token(BaseModel):
+class Token(DiminiBaseModel):
     access_token: str
     token_type: str = "bearer"
 
-class TokenData(BaseModel):
+class TokenData(DiminiBaseModel):
     user_id: Optional[str] = None
     email: Optional[str] = None

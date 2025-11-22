@@ -39,24 +39,34 @@ export const useHumeWebSocket = (configId: string) => {
       ws.onopen = async () => {
         console.log('HUME: Connected');
 
-        // Send session settings (WebM doesn't need explicit settings)
+        // Send session settings (match Hume config: linear16, 48kHz mono)
         ws.send(JSON.stringify({
           type: 'session_settings',
           audio: {
-            encoding: 'webm'  // Auto-detected by Hume
+            encoding: 'linear16',
+            sample_rate: 48000,
+            channels: 1
           }
         }));
 
         // Inject patient context if provided
         if (patientId) {
-          const contextText = await getPatientContext(patientId);
+          try {
+            const contextText = await getPatientContext(patientId);
 
-          ws.send(JSON.stringify({
-            type: 'user_input',
-            text: contextText
-          }));
+            if (contextText) {
+              ws.send(JSON.stringify({
+                type: 'user_input',
+                text: contextText
+              }));
 
-          console.log('HUME: Context injected');
+              console.log('HUME: Context injected');
+            } else {
+              console.warn('HUME: Context unavailable, continuing without injection');
+            }
+          } catch (error) {
+            console.error('HUME: Failed to inject context', error);
+          }
         }
 
         setState({ connected: true, error: null, status: 'connected' });

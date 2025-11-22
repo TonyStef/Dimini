@@ -469,6 +469,16 @@ curl http://localhost:8000/api/sessions/SESSION_ID/insights
 open http://localhost:7474
 # Login: neo4j / diminipassword
 
+### Voice sanity checklist (Nov 22)
+1. `docker-compose -f docker-compose.local-prod.yml up -d`
+2. Log in at http://localhost:3000/login
+3. Start a patient session or use Quick Start
+4. Grant microphone permission and confirm status pill shows “Listening”
+5. Speak: “I feel anxious about work and my boss stresses me out”
+6. Watch graph nodes appear (red emotions, blue topics)
+7. Tail backend logs for `nodes_added` (no betweenness stack traces)
+8. Optional: replay transcript via curl to compare `/api/sessions/{id}/graph`
+
 # Stop everything
 docker-compose down
 ```

@@ -63,10 +63,32 @@ export async function getPatientContext(patientId: string): Promise<string> {
 
 /**
  * Connect to Hume WebSocket
+ * Returns a Promise that resolves when the WebSocket connection is established
  */
 export async function connectToHume(configId: string): Promise<WebSocket> {
   const token = await getHumeSessionToken();
   const url = `${HUME_WS_URL}?access_token=${token}&config_id=${configId}`;
 
-  return new WebSocket(url);
+  // Create WebSocket and wait for it to open
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+
+    // Timeout after 10 seconds
+    const timeout = setTimeout(() => {
+      ws.close();
+      reject(new Error('Hume WebSocket connection timeout'));
+    }, 10000);
+
+    ws.onopen = () => {
+      clearTimeout(timeout);
+      console.log('[Hume] WebSocket opened and ready');
+      resolve(ws);
+    };
+
+    ws.onerror = (error) => {
+      clearTimeout(timeout);
+      console.error('[Hume] WebSocket connection error:', error);
+      reject(new Error('Failed to connect to Hume WebSocket'));
+    };
+  });
 }

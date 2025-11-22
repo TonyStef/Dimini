@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useVoiceSession } from '@/hooks/useVoiceSession';
+import { useRealtimeGraph } from '@/hooks/useRealtimeGraph';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import VoiceStatusIndicator from '@/components/VoiceStatusIndicator';
+import SemanticGraph from '@/components/SemanticGraph';
 import { Square, Timer, User, Activity, Mic, MicOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -41,6 +43,9 @@ export default function LiveSessionView({
     isRecording,
     connected
   } = useVoiceSession(sessionId, patientId || undefined);
+
+  // Use real-time graph hook to receive live KG updates
+  const { graphData, loading: graphLoading } = useRealtimeGraph(sessionId !== 'quick-start-session' ? sessionId : null);
 
   // Mock patient data - replace with real data later
   const patientName = patientId ? 'Patient Name' : 'Quick Start Session';
@@ -231,7 +236,7 @@ export default function LiveSessionView({
             )}
           </div>
 
-          {/* Right Panel - Live Graph */}
+          {/* Right Panel - Live Knowledge Graph */}
           <div className="lg:col-span-2">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -241,28 +246,47 @@ export default function LiveSessionView({
               <Card className="h-full min-h-[600px]">
                 <CardHeader className="border-b">
                   <div className="flex items-center justify-between">
-                    <CardTitle>Live Transcript</CardTitle>
-                    <Badge variant="outline">
-                      <Activity className="h-3 w-3 mr-1 animate-pulse" />
-                      Real-time
-                    </Badge>
+                    <CardTitle>Live Knowledge Graph</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        <Activity className="h-3 w-3 mr-1 animate-pulse" />
+                        Real-time
+                      </Badge>
+                      {graphData.nodes.length > 0 && (
+                        <Badge variant="secondary">
+                          {graphData.nodes.length} nodes, {graphData.links.length} edges
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8 h-[calc(100%-80px)] overflow-y-auto">
-                  {lastMessage ? (
-                    <div className="space-y-4">
-                      <p className="text-sm">{lastMessage}</p>
-                    </div>
+                <CardContent className="p-0 h-[calc(100%-80px)]">
+                  {graphData.nodes.length > 0 ? (
+                    <SemanticGraph
+                      graphData={graphData}
+                      loading={graphLoading}
+                      highlightMetric="pagerank"
+                    />
                   ) : (
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center justify-center h-full bg-slate-950">
                       <div className="text-center">
-                        <Activity className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-pulse" />
-                        <h3 className="text-xl font-semibold mb-2">
+                        <Activity className="h-16 w-16 text-slate-400 mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-xl font-semibold mb-2 text-slate-200">
                           Waiting for conversation...
                         </h3>
-                        <p className="text-muted-foreground max-w-md">
-                          Start speaking to see the transcript and emotion analysis appear here.
+                        <p className="text-slate-400 max-w-md">
+                          Start speaking to see topics and emotions appear as a knowledge graph.
                         </p>
+                        <div className="mt-4 flex items-center justify-center gap-4 text-sm text-slate-500">
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-full bg-blue-500"></div>
+                            <span>Topics</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                            <span>Emotions</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

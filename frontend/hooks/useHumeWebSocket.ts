@@ -31,48 +31,13 @@ export const useHumeWebSocket = (configId: string) => {
     try {
       setState(prev => ({ ...prev, status: 'connecting' }));
 
-      // Get WebSocket connection
+      // Get WebSocket connection (waits for connection to open)
       const ws = await connectToHume(configId);
       wsRef.current = ws;
 
-      // Connection opened
-      ws.onopen = async () => {
-        console.log('HUME: Connected');
+      console.log('HUME: Connected');
 
-        // Send session settings (match Hume config: linear16, 48kHz mono)
-        ws.send(JSON.stringify({
-          type: 'session_settings',
-          audio: {
-            encoding: 'linear16',
-            sample_rate: 48000,
-            channels: 1
-          }
-        }));
-
-        // Inject patient context if provided
-        if (patientId) {
-          try {
-            const contextText = await getPatientContext(patientId);
-
-            if (contextText) {
-              ws.send(JSON.stringify({
-                type: 'user_input',
-                text: contextText
-              }));
-
-              console.log('HUME: Context injected');
-            } else {
-              console.warn('HUME: Context unavailable, continuing without injection');
-            }
-          } catch (error) {
-            console.error('HUME: Failed to inject context', error);
-          }
-        }
-
-        setState({ connected: true, error: null, status: 'connected' });
-      };
-
-      // Handle messages from Hume
+      // Set up message handlers AFTER connection is established
       ws.onmessage = (event) => {
         const message: HumeMessage = JSON.parse(event.data);
         console.log('HUME:', message.type);
@@ -82,17 +47,47 @@ export const useHumeWebSocket = (configId: string) => {
         }
       };
 
-      // Handle errors
       ws.onerror = (error) => {
         console.error('HUME: WebSocket error', error);
         setState({ connected: false, error: 'Connection error', status: 'error' });
       };
 
-      // Handle close
       ws.onclose = () => {
         console.log('HUME: Disconnected');
         setState({ connected: false, error: null, status: 'disconnected' });
       };
+
+      // Send session settings (match Hume config: linear16, 48kHz mono)
+      ws.send(JSON.stringify({
+        type: 'session_settings',
+        audio: {
+          encoding: 'linear16',
+          sample_rate: 48000,
+          channels: 1
+        }
+      }));
+
+      // Inject patient context if provided
+      if (patientId) {
+        try {
+          const contextText = await getPatientContext(patientId);
+
+          if (contextText) {
+            ws.send(JSON.stringify({
+              type: 'user_input',
+              text: contextText
+            }));
+
+            console.log('HUME: Context injected');
+          } else {
+            console.warn('HUME: Context unavailable, continuing without injection');
+          }
+        } catch (error) {
+          console.error('HUME: Failed to inject context', error);
+        }
+      }
+
+      setState({ connected: true, error: null, status: 'connected' });
 
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Connection failed';

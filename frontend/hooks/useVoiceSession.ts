@@ -78,7 +78,7 @@ export const useVoiceSession = (
    * Handle messages from Hume
    */
   useEffect(() => {
-    onMessage((message) => {
+    onMessage(async (message) => {
       switch (message.type) {
         case 'audio_output':
           // Play assistant response
@@ -95,6 +95,28 @@ export const useVoiceSession = (
             emotions,
             lastMessage: `Patient: ${content}`
           }));
+
+          // Send transcript to backend for entity extraction & KG building
+          // NOTE: Quick Start sessions ('quick-start-session') will get 404 from backend
+          // For full KG functionality, use a real patient session
+          if (content) {
+            try {
+              const token = localStorage.getItem('token');
+              await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/transcript`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` })
+                },
+                body: JSON.stringify({ text: content })
+              });
+              console.log('[KG] Transcript sent to backend:', content.substring(0, 50) + '...');
+            } catch (err) {
+              console.error('[KG] Failed to send transcript:', err);
+              // If this is a quick-start session, the backend will return 404
+              // User should use a real patient session to see the KG build
+            }
+          }
           break;
 
         case 'assistant_message':

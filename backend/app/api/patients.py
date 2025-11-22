@@ -74,22 +74,21 @@ async def create_patient(
                 detail="Patient with this email already exists"
             )
     
-    # Create patient
-    demographics = (
-        fields.Json(patient_data.demographics.model_dump(exclude_none=True))
-        if patient_data.demographics
-        else None
-    )
+    # Create patient - build data dict conditionally
+    patient_data_dict = {
+        "name": patient_data.name,
+        "email": patient_data.email,
+        "phone": patient_data.phone,
+        "therapistId": current_user.id,
+    }
 
-    patient = await db.patient.create(
-        data={
-            "name": patient_data.name,
-            "email": patient_data.email,
-            "phone": patient_data.phone,
-            "demographics": demographics,
-            "therapist": {"connect": {"id": current_user.id}},
-        }
-    )
+    # Only add demographics if there's actual data (OMIT field if None/empty)
+    if patient_data.demographics:
+        demographics_dict = patient_data.demographics.model_dump(exclude_none=True)
+        if demographics_dict:  # Check if dict is non-empty
+            patient_data_dict["demographics"] = demographics_dict
+
+    patient = await db.patient.create(data=patient_data_dict)
     
     logger.info(f"Created patient {patient.id} for therapist {current_user.id}")
     return PatientResponse.model_validate(patient)

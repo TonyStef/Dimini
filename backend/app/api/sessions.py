@@ -19,6 +19,7 @@ from app.services.realtime import RealtimeService
 from app.voice_agent.services.patient_service import PatientService
 from app.graph.algorithms import graph_algorithms
 from app.graph.neo4j_client import neo4j_client
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +104,20 @@ async def start_session(
             "status": "ACTIVE"
         }
     )
-    
+
     if active_session:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Patient already has an active session"
+        # Auto-close stale sessions (for debugging/recovery)
+        logger.warning(f"Found existing active session {active_session.id}, auto-closing")
+        await db.session.update(
+            where={"id": active_session.id},
+            data={
+                "status": "COMPLETED",
+                "endedAt": datetime.utcnow()
+            }
         )
+        # Stop background algorithms for the old session
+        graph_algorithms.stop_background_algorithms(active_session.id)
+        logger.info(f"Auto-closed session {active_session.id} to allow new session")
     
     # Create session
     session = await db.session.create(
@@ -197,13 +206,18 @@ async def end_session(
             "therapistId": current_user.id
         }
     )
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
+    # IDEMPOTENT: If already completed, just return it
+    if session.status == "COMPLETED":
+        logger.info(f"Session {session_id} already completed, returning existing")
+        return SessionResponse.model_validate(session)
+
     if session.status != "ACTIVE":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -476,7 +490,9 @@ async def get_patient_context(
         )
 
     try:
-        patient_service = PatientService()
+        # Initialize PatientService with required parameters
+        api_url = f"http://{settings.HOST}:{settings.PORT}/api"
+        patient_service = PatientService(api_url=api_url, therapist_id=current_user.id)
         patient_history = await patient_service.fetch_patient_history(patient_id)
         context_text = patient_service.format_history_for_context(patient_history)
 

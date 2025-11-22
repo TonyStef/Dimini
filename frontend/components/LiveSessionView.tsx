@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useVoiceSession } from '@/hooks/useVoiceSession';
 import { useRealtimeGraph } from '@/hooks/useRealtimeGraph';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,9 @@ export default function LiveSessionView({
 }: LiveSessionViewProps) {
   const [sessionDuration, setSessionDuration] = useState(0);
 
+  // Guard against React Strict Mode double-execution
+  const sessionInitializedRef = useRef(false);
+
   // Use voice session hook
   const {
     startSession,
@@ -45,7 +48,7 @@ export default function LiveSessionView({
   } = useVoiceSession(sessionId, patientId || undefined);
 
   // Use real-time graph hook to receive live KG updates
-  const { graphData, loading: graphLoading } = useRealtimeGraph(sessionId !== 'quick-start-session' ? sessionId : null);
+  const { graphData, loading: graphLoading } = useRealtimeGraph(sessionId);
 
   // Mock patient data - replace with real data later
   const patientName = patientId ? 'Patient Name' : 'Quick Start Session';
@@ -55,12 +58,19 @@ export default function LiveSessionView({
   // ========================================
 
   useEffect(() => {
-    startSession();
+    // Guard against React Strict Mode double-execution
+    if (!sessionInitializedRef.current) {
+      sessionInitializedRef.current = true;
+      startSession();
+    }
 
     return () => {
-      endSession();
+      // Only cleanup if we actually initialized
+      if (sessionInitializedRef.current) {
+        endSession();
+      }
     };
-  }, []);
+  }, [startSession, endSession]);
 
   useEffect(() => {
     const interval = setInterval(() => {

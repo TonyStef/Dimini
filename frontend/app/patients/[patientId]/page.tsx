@@ -372,7 +372,10 @@ export default function PatientDetailPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <h4 className="font-semibold">
-                                  {format(new Date(session.started_at), 'MMMM d, yyyy')}
+                                  {session.started_at
+                                    ? format(new Date(session.started_at), 'MMMM d, yyyy')
+                                    : 'Session Date Unavailable'
+                                  }
                                 </h4>
                                 <Badge
                                   variant={
@@ -390,9 +393,10 @@ export default function PatientDetailPage() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                Started at {format(new Date(session.started_at), 'h:mm a')}
-                                {session.ended_at &&
+                                {session.started_at && `Started at ${format(new Date(session.started_at), 'h:mm a')}`}
+                                {session.ended_at && session.started_at &&
                                   ` • Ended at ${format(new Date(session.ended_at), 'h:mm a')}`}
+                                {!session.started_at && 'Session time unavailable'}
                               </p>
                             </div>
                             <Button variant="outline" size="sm" asChild>

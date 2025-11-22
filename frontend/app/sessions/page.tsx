@@ -16,9 +16,11 @@ import {
   Play,
   Users,
   Search,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 // ============================================================================
 // Main Component
@@ -27,12 +29,13 @@ import { motion } from 'framer-motion';
 export default function SessionsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { patients, loading, fetchPatients, startSession } = usePatients();
+  const { patients, loading, fetchPatients, createPatient, startSession, deletePatient } = usePatients();
 
   // Local state
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [quickStartLoading, setQuickStartLoading] = useState(false);
 
   // Mock data for stats (replace with real data later)
   const activeSessions = 0;
@@ -89,10 +92,66 @@ export default function SessionsPage() {
   // ========================================
 
   const handleQuickStart = async () => {
-    // Quick start without patient selection
-    // For now, show a placeholder - implement full logic later
-    setActiveSessionId('quick-start-session');
-    setSelectedPatientId(null);
+    // Prevent double-click
+    if (quickStartLoading) return;
+
+    setQuickStartLoading(true);
+    let createdPatientId: string | null = null;
+
+    try {
+      // Step 1: Create anonymous patient for Quick Start demo
+      const timestamp = new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const anonymousPatient = await createPatient({
+        name: `Quick Start Demo - ${timestamp}`
+        // email and phone are optional, omit them (don't use null)
+        // demographics is optional, omit it for temporary Quick Start patients
+      });
+
+      if (!anonymousPatient) {
+        throw new Error('Patient creation failed');
+      }
+
+      createdPatientId = anonymousPatient.id;
+
+      // Step 2: Start real session with this patient
+      const session = await startSession(anonymousPatient.id);
+
+      if (!session) {
+        throw new Error('Session creation failed');
+      }
+
+      setActiveSessionId(session.id);
+      setSelectedPatientId(anonymousPatient.id);
+
+      toast.success('Quick Start session created', {
+        description: 'Session is ready for voice interaction'
+      });
+
+    } catch (error) {
+      console.error('Quick Start failed:', error);
+
+      // Cleanup: Delete orphaned patient if session creation failed
+      if (createdPatientId) {
+        try {
+          await deletePatient(createdPatientId);
+          console.log('Cleaned up orphaned patient:', createdPatientId);
+        } catch (cleanupErr) {
+          console.error('Failed to cleanup patient:', cleanupErr);
+        }
+      }
+
+      toast.error('Failed to start Quick Start session', {
+        description: error instanceof Error ? error.message : 'Please try again or select a patient manually'
+      });
+    } finally {
+      setQuickStartLoading(false);
+    }
   };
 
   // ========================================
@@ -230,9 +289,19 @@ export default function SessionsPage() {
                   size="lg"
                   onClick={handleQuickStart}
                   className="gap-2 ml-4"
+                  disabled={quickStartLoading}
                 >
-                  <Play className="h-5 w-5" />
-                  Quick Start
+                  {quickStartLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5" />
+                      Quick Start
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>

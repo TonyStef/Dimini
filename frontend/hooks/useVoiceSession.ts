@@ -66,8 +66,13 @@ export const useVoiceSession = (
 
     // Call backend to finalize session
     try {
+      const token = localStorage.getItem('token');
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/end`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
       });
     } catch (err) {
       console.error('Session end error:', err);

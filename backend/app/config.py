@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import List
+import json
 
 class Settings(BaseSettings):
     # Database
@@ -27,8 +29,21 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
-    
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """Parse ALLOWED_ORIGINS from various formats"""
+        if isinstance(v, str):
+            # Try parsing as JSON first
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # Fall back to comma-separated
+                return [origin.strip() for origin in v.split(',') if origin.strip()]
+        return v
+
     # Semantic Similarity
     SIMILARITY_THRESHOLD: float = 0.75
     

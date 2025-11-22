@@ -152,7 +152,7 @@ export const patientsAPI = {
    * Create a new patient
    */
   async create(data: PatientCreate): Promise<Patient> {
-    const response = await api.post<Patient>('/api/patients', data);
+    const response = await api.post<Patient>('/api/patients/', data);
     return response.data;
   },
 

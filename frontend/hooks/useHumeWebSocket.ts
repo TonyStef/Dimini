@@ -112,11 +112,17 @@ export const useHumeWebSocket = (configId: string) => {
     // Simple blob to base64 - NO CONVERSION NEEDED!
     const reader = new FileReader();
     reader.onloadend = () => {
+      // Re-check WebSocket state inside callback (async race condition fix)
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        console.warn('[HUME] WebSocket closed during file read, dropping chunk');
+        return;
+      }
+
       const dataUrl = reader.result as string;
       const base64 = dataUrl.split(',')[1]; // Remove "data:audio/webm;base64," prefix
       console.log(`[HUME] Base64 length: ${base64.length}, sending to Hume...`);
 
-      wsRef.current!.send(JSON.stringify({
+      wsRef.current.send(JSON.stringify({
         type: 'audio_input',
         data: base64
       }));

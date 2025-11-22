@@ -35,42 +35,18 @@ export default function SemanticGraph({
   highlightMetric = 'pagerank'
 }: SemanticGraphProps) {
   const graphRef = useRef<any>();
-  const hasZoomedRef = useRef(false);
 
-  // DISABLED: Auto-zoom was causing node magnification issues
-  // useEffect(() => {
-  //   if (graphRef.current && graphData.nodes.length > 0 && !hasZoomedRef.current) {
-  //     graphRef.current.zoomToFit(400, 200);
-  //     hasZoomedRef.current = true;
-  //   }
-  // }, [graphData.nodes.length]);
-
-  // DIAGNOSTIC: Log when nodes are added and reheat simulation
+  // Auto-fit graph when new nodes appear or on initial load
   useEffect(() => {
-    console.log('[GRAPH] Nodes updated, count:', graphData.nodes.length);
-    console.log('[GRAPH] Node positions:', graphData.nodes.map(n => ({
-      label: n.label,
-      x: n.x?.toFixed(1),
-      y: n.y?.toFixed(1),
-      type: n.type
-    })));
-
     if (graphRef.current && graphData.nodes.length > 0) {
-      setTimeout(() => {
-        console.log('[REHEAT] Attempting reheat, graphRef exists:', !!graphRef.current);
-        console.log('[REHEAT] d3ReheatSimulation method exists:', typeof graphRef.current?.d3ReheatSimulation);
-        if (graphRef.current?.d3ReheatSimulation) {
-          graphRef.current.d3ReheatSimulation();
-          console.log('[REHEAT] ✅ Reheat called successfully');
-        } else {
-          console.warn('[REHEAT] ⚠️ d3ReheatSimulation method not available');
-        }
-      }, 100);
+      // Delay to allow physics to settle before zooming
+      const timer = setTimeout(() => {
+        graphRef.current.zoomToFit(1000, 100);  // FIXED: Longer duration, more padding
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [graphData.nodes.length]);
-
-  // REMOVED d3-force configuration due to Docker/dependency issues
-  // Graph will use react-force-graph's built-in physics simulation
 
   if (loading) {
     return (
@@ -80,9 +56,9 @@ export default function SemanticGraph({
     );
   }
 
-  // Node size based on selected metric (CAPPED at 40px to prevent massive nodes)
+  // Node size based on selected metric
   const getNodeSize = (node: any) => {
-    const baseSize = 5;
+    const baseSize = 4;  // FIXED: Reduced from 5 to 4
     let value = 0;
 
     switch (highlightMetric) {
@@ -97,15 +73,7 @@ export default function SemanticGraph({
         break;
     }
 
-    const calculatedSize = baseSize + value * 3;
-    const cappedSize = Math.min(calculatedSize, 40);  // CAP at 40px maximum
-
-    // Log oversized nodes
-    if (calculatedSize > 40) {
-      console.log('[NODE-SIZE] Capping oversized node:', node.label, 'from', calculatedSize.toFixed(1), 'to 40px');
-    }
-
-    return cappedSize;
+    return baseSize + value * 0.2;  // FIXED: Reduced multiplier from 3 to 0.2
   };
 
   // Node color based on type (match landing page demo)
@@ -118,15 +86,6 @@ export default function SemanticGraph({
       <ForceGraph2D
         ref={graphRef}
         graphData={graphData}
-
-        // CRITICAL FIX: Tell react-force-graph how to read node/link IDs
-        nodeId="id"
-        linkSource="source"
-        linkTarget="target"
-
-        // NO DAG MODE: Pure physics for instant real-time rendering + dynamic node additions
-        // (dag modes don't work well for real-time sessions with incremental nodes)
-
         nodeLabel={(node: any) => `${node.label} (${highlightMetric}: ${
           highlightMetric === 'weighted_degree' ? node.weightedDegree?.toFixed(2) :
           highlightMetric === 'pagerank' ? node.pagerank?.toFixed(3) :
@@ -135,20 +94,29 @@ export default function SemanticGraph({
         nodeRelSize={1}
         nodeVal={getNodeSize}
         nodeColor={getNodeColor}
-        linkWidth={link => Math.max((link.value || 0.75) * 3, 1.5)}  // Min 1.5px width for visibility
+        linkWidth={link => (link.value || 0.75) * 3}
         linkDirectionalParticles={2}
         linkDirectionalParticleSpeed={0.005}
         backgroundColor="#020617"
-        linkColor={() => '#94a3b8'}  // Brighter slate for better visibility
+        linkColor={() => '#64748b'}
 
-        // Physics simulation (let forces work to separate nodes)
-        d3AlphaDecay={0.01}  // Slower decay - let forces work longer
-        d3VelocityDecay={0.4}
-        warmupTicks={100}  // Run 100 iterations before rendering (forces need time!)
-        cooldownTime={5000}
+        // PERFORMANCE OPTIMIZATIONS:
+        // Balanced physics convergence for better settling
+        d3AlphaDecay={0.02}  // FIXED: Reverted to slower for better layout
+        d3VelocityDecay={0.3}  // FIXED: Natural damping (reverted from 0.4)
+        warmupTicks={200}  // FIXED: Increased pre-stabilization from 100 to 200
+        cooldownTime={10000}  // FIXED: Increased to 10s for complex graphs
 
-        // NOTE: Force configuration is done via d3Force() method in useEffect
-        // (d3ForceCharge, d3ForceLink, etc. props don't exist in the API)
+        // Force simulation configuration
+        d3ForceCharge={() => -2500}  // FIXED: Increased repulsion from -1500 to -2500
+        d3ForceLink={(link) => link.value ? 250 / link.value : 250}  // FIXED: Increased from 150 to 250
+        d3ForceCenter={() => ({ x: 0, y: 0, strength: 0.05 })}  // FIXED: Increased from 0.03 to 0.05
+
+        // COLLISION DETECTION - Prevents node overlap
+        d3ForceCollide={(node: any) => {
+          const nodeSize = getNodeSize(node);
+          return nodeSize + 8;  // Node radius + 8px minimum spacing
+        }}
 
         // 2. Node visibility filtering for large graphs
         nodeVisibility={(node: any) => {
@@ -159,34 +127,20 @@ export default function SemanticGraph({
           return true;
         }}
 
-        // 3. Canvas rendering with glow effects (matches landing page demo)
+        // 3. Canvas rendering (faster than SVG)
         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
+          ctx.font = `${fontSize}px Sans-Serif`;
+
+          // Draw node circle
           const size = getNodeSize(node);
-          const color = getNodeColor(node);
-
-          // Draw glow halo (like demo)
-          ctx.fillStyle = color;
-          ctx.globalAlpha = 0.15;
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, size + 5, 0, 2 * Math.PI);
-          ctx.fill();
-
-          // Draw main node circle
-          ctx.globalAlpha = 1.0;
-          ctx.fillStyle = color;
+          ctx.fillStyle = getNodeColor(node);
           ctx.beginPath();
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
           ctx.fill();
 
-          // Draw white border around node (like target image)
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2 / globalScale;
-          ctx.stroke();
-
           // Draw label (always visible like demo)
-          ctx.font = `${fontSize}px Sans-Serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillStyle = '#fff';
